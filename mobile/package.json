@@ -1,0 +1,21 @@
+{
+  "name": "iranglassfleet-mobile",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios",
+    "apk": "cap sync android && cd android && ./gradlew assembleDebug",
+    "icons": "capacitor-assets generate --iconBackgroundColor '#0a60ff' --iconBackgroundColorDark '#0a60ff' --splashBackgroundColor '#f5f5f7' --splashBackgroundColorDark '#000000'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}
