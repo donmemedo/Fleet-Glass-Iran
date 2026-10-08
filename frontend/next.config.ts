@@ -14,6 +14,7 @@ const security = [
 const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  images: { unoptimized: true }, // next/image is not used; this keeps /_next/image from re-encoding on demand
   async headers() {
     return [
       { source: "/:path*", headers: security },

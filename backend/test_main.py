@@ -21,7 +21,8 @@ def test_api(monkeypatch):
     assert c.get("/api/fleet", headers={"if-none-match": f.headers["etag"]}).status_code == 304
 
     bad = [{**LEAD, "phone": "0912"}, {**LEAD, "fleet_size": "10"}, {**LEAD, "extra": 1},
-           {**LEAD, "company": "Acme‮"}, {**LEAD, "name": "Al\x00i"}, {**LEAD, "company": "A" * 121}]
+           {**LEAD, "company": "Acme\u202e"}, {**LEAD, "name": "Al\x00i"}, {**LEAD, "company": "A" * 121},
+           {**LEAD, "phone": "۰۹۱۲۱۲۳۴۵۶۷"}, {**LEAD, "city": "Teh\u2028ran"}, {**LEAD, "name": "Al\ue000i"}]
     for body in bad:
         assert c.post("/api/requests", json=body).status_code == 422, body
     r = c.post("/api/requests", content='{"fleet_size": NaN}', headers={"content-type": "application/json"})

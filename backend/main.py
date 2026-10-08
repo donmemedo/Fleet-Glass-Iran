@@ -162,9 +162,12 @@ def fleet(if_none_match: str = Header("")):
     return _send_static("fleet", if_none_match)
 
 
+BAD_CATEGORIES = {"Cc", "Cf", "Co", "Cs", "Cn", "Zl", "Zp"}  # controls, format/bidi, private use, surrogates, unassigned, line breaks
+
+
 def _plain(v: str) -> str:
     # Reject control and format characters (bidi overrides, NUL, ...). Persian needs ZWNJ/ZWJ, so those stay.
-    if any(unicodedata.category(c) in ("Cc", "Cf") and c not in "‌‍" for c in v):
+    if any(unicodedata.category(c) in BAD_CATEGORIES and c not in "\u200c\u200d" for c in v):
         raise ValueError("control characters are not allowed")
     return v
 
@@ -173,7 +176,7 @@ class Lead(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     company: str = Field(min_length=2, max_length=120)
     name: str = Field(min_length=2, max_length=80)
-    phone: str = Field(pattern=r"^(\+98|0)?9\d{9}$")
+    phone: str = Field(pattern=r"^(\+98|0)?9[0-9]{9}$")  # [0-9], not \d: \d also matches Persian and other digits
     fleet_size: int = Field(ge=1, le=100_000)
     city: str = Field(min_length=2, max_length=60)
     website: str = Field("", max_length=200)  # honeypot: hidden in the form, only bots fill it
