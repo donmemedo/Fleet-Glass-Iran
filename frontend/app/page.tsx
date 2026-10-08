@@ -1,23 +1,24 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, type PointerEvent } from "react";
-import { api, CountUp, fmt, Icon, LeadForm, Nav, useFx, useMoney } from "./components";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CountUp, fmt, Icon, LeadForm, LoadError, Nav, perFrame, useApi, useFx, useMoney } from "./components";
 import { useApp } from "./providers";
+import { quote } from "./quote";
 
 type Stats = { fleets: number; vehicles_checked: number; sla_minutes: number; renewal: number };
 type Plan = { id: string; price: number; unit: string; features: string[]; featured?: boolean };
-type Quote = { cracked: number; without: number; with: number; saved: number; downtime_days: number };
 
 function Car() {
   const { t } = useApp();
-  const tilt = (e: PointerEvent<HTMLDivElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - 0.5) * 14}deg`);
-    e.currentTarget.style.setProperty("--rx", `${((e.clientY - r.top) / r.height - 0.5) * -10}deg`);
-  };
+  // Tilt tracks the pointer 1:1, with one layout read per frame.
+  const tilt = useMemo(() => perFrame((el: HTMLElement, x: number, y: number) => {
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--ry", `${((x - r.left) / r.width - 0.5) * 14}deg`);
+    el.style.setProperty("--rx", `${((y - r.top) / r.height - 0.5) * -10}deg`);
+  }), []);
   const cracks = ["M0 0l-18-22-9-14", "M0 0l24-16 14-3", "M0 0l20 20 6 16", "M0 0l-22 14-18 4", "M0 0l4-28", "M0 0l-6 26 -8 10", "M0 0l30 4"];
   return (
-    <div className="car-wrap" onPointerMove={tilt} onPointerLeave={(e) => (e.currentTarget.style.setProperty("--rx", "0deg"), e.currentTarget.style.setProperty("--ry", "0deg"))}>
+    <div className="car-wrap" onPointerMove={(e) => tilt(e.currentTarget, e.clientX, e.clientY)} onPointerLeave={(e) => (e.currentTarget.style.setProperty("--rx", "0deg"), e.currentTarget.style.setProperty("--ry", "0deg"))}>
       <svg className="car" viewBox="0 0 600 360" role="img" aria-label="Windshield inspection">
         <defs>
           <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--car-1)" /><stop offset="1" stopColor="var(--car-2)" /></linearGradient>
@@ -60,11 +61,7 @@ function Calculator() {
   const money = useMoney();
   const [vehicles, setVehicles] = useState(250);
   const [rate, setRate] = useState(25);
-  const [q, setQ] = useState<Quote | null>(null);
-  useEffect(() => {
-    const id = setTimeout(() => api<Quote>("/quote", { method: "POST", body: JSON.stringify({ vehicles, crack_rate: rate }) }).then(setQ).catch(() => {}), 120);
-    return () => clearTimeout(id);
-  }, [vehicles, rate]);
+  const q = quote(vehicles, rate); // computed locally: the numbers follow the thumb with no network wait
   const range = (label: string, v: number, set: (n: number) => void, min: number, max: number, step: number, suffix = "") => (
     <label className="range">
       <span className="range-top"><span>{label}</span><b>{fmt(v, lang)}{suffix}</b></span>
@@ -79,12 +76,18 @@ function Calculator() {
         <p className="muted small">{t.calc.note}</p>
       </div>
       <div className="calc-out">
-        <div className="out-row"><span>{t.calc.without}</span><s>{q ? money(q.without) : "—"}</s></div>
-        <div className="out-row"><span>{t.calc.with}</span><b>{q ? money(q.with) : "—"}</b></div>
-        <div className="out-saved">
+        <div className="out-row"><span>{t.calc.without}</span><s>{money(q.without)}</s></div>
+        <div className="out-row"><span>{t.calc.with}</span><b>{money(q.with)}</b></div>
+        <div className="out-saved" aria-live="polite">
           <span>{t.calc.saved}</span>
-          <strong className="grad-text">{q ? money(q.saved) : "—"}</strong>
-          <em>{q && `${fmt(q.downtime_days, lang)} ${t.calc.downtime}`}</em>
+          {q.saved > 0 ? (
+            <>
+              <strong className="grad-text">{money(q.saved)}</strong>
+              <em>{`${fmt(q.downtimeDays, lang)} ${t.calc.downtime}`}</em>
+            </>
+          ) : (
+            <p className="no-save">{t.calc.noSave}</p>
+          )}
         </div>
       </div>
     </div>
@@ -94,20 +97,25 @@ function Calculator() {
 export default function Home() {
   const { t, lang } = useApp();
   const money = useMoney();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  useEffect(() => {
-    api<Stats>("/stats").then(setStats).catch(() => {});
-    api<Plan[]>("/plans").then(setPlans).catch(() => {});
-  }, []);
+  const statsRes = useApi<Stats>("/stats");
+  const plansRes = useApi<Plan[]>("/plans");
+  const stats = statsRes.data;
+  const plans = plansRes.data ?? [];
   useFx(`${lang}${plans.length}${!!stats}`);
+  // Pause the hero's looping animations while it is offscreen: the SVG loops repaint on the main thread.
+  const hero = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => hero.current?.classList.toggle("off", !e.isIntersecting));
+    io.observe(hero.current!);
+    return () => io.disconnect();
+  }, []);
   const icons = ["drop", "scan", "user", "chart"];
 
   return (
     <>
       <Nav />
       <main>
-        <section className="hero">
+        <section className="hero" ref={hero}>
           <div className="aurora" aria-hidden><i /><i /><i /></div>
           <div className="hero-copy">
             <p className="eyebrow reveal"><span className="pulse" />{t.hero.eyebrow}</p>
@@ -123,10 +131,11 @@ export default function Home() {
 
         <section className="stats">
           <p className="caption">{t.stats.caption}</p>
+          {statsRes.status !== undefined && <LoadError onRetry={statsRes.retry} />}
           <div className="stats-grid">
             {([["fleets", stats?.fleets], ["vehicles", stats?.vehicles_checked], ["sla", stats?.sla_minutes], ["renewal", stats?.renewal]] as const).map(([k, v], i) => (
               <div key={k} className={`stat reveal d${i}`}>
-                <strong>{v == null ? <span className="skeleton" /> : <CountUp to={v} />}</strong>
+                <strong>{v != null ? <CountUp to={v} /> : statsRes.status === undefined ? <span className="skeleton" /> : "—"}</strong>
                 <span>{t.stats[k]}</span>
               </div>
             ))}
@@ -173,7 +182,9 @@ export default function Home() {
         <section id="pricing" className="section">
           <p className="kicker reveal">{t.pricing.kicker}</p>
           <h2 className="reveal d1">{t.pricing.title}</h2>
+          {plansRes.status !== undefined && <LoadError onRetry={plansRes.retry} />}
           <div className="plans">
+            {!plansRes.data && plansRes.status === undefined && [0, 1, 2].map((i) => <div key={i} className="plan"><span className="skeleton tall" /></div>)}
             {plans.map((p, i) => (
               <article key={p.id} className={`plan spot reveal d${i} ${p.featured ? "featured" : ""}`}>
                 {p.featured && <span className="badge">{t.pricing.popular}</span>}

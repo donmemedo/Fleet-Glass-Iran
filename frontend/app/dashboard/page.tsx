@@ -1,6 +1,6 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, CountUp, fmt, Icon, LeadForm, Nav, Plate, useFx, useMoney } from "../components";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type RefObject } from "react";
+import { CountUp, fmt, Icon, LeadForm, LoadError, Nav, Plate, useApi, useFx, useMoney } from "../components";
 import { useApp } from "../providers";
 
 type Vehicle = { id: number; plate: string; model: string; year: number; city: string; risk: "low" | "medium" | "high"; status: string; crack_mm: number; last_check: string };
@@ -8,23 +8,99 @@ type Fleet = { vehicles: Vehicle[]; risk: Record<string, number>; months: { m: n
 type Req = { id: number; company: string; name: string; fleet_size: number; city: string; created: string };
 
 const ORDER = { high: 0, medium: 1, low: 2 };
+const KEY = "igf-admin"; // sessionStorage: cleared when the tab closes
+
+// Apple's momentum projection (Designing Fluid Interfaces): where a flick would come to rest.
+const project = (v: number, d = 0.998) => ((v / 1000) * d) / (1 - d);
+// Soft resistance past the top edge instead of a hard stop.
+const rubberband = (x: number, size: number, c = 0.55) => (x * size * c) / (size + c * Math.abs(x));
+
+/** Drag the sheet's header down to dismiss: 1:1 tracking, interruptible, release velocity handed to the spring. */
+function useSheetDrag(dialog: RefObject<HTMLDialogElement | null>) {
+  const s = useRef({ y: 0, v: 0, grab: 0, last: 0, t: 0, raf: 0, on: false });
+  const move = (y: number) => {
+    s.current.y = y;
+    dialog.current!.style.transform = y ? `translateY(${y}px)` : "";
+  };
+  // Critically damped spring (damping 1, response 0.3 s) in closed form, starting from the live offset and velocity.
+  const settle = (to: number, done?: () => void) => {
+    const w = (2 * Math.PI) / 0.3, x0 = s.current.y - to, v0 = s.current.v, t0 = performance.now();
+    const step = (now: number) => {
+      const t = (now - t0) / 1000, k = Math.exp(-w * t);
+      const x = (x0 + (v0 + w * x0) * t) * k, v = (v0 - w * (v0 + w * x0) * t) * k;
+      if (Math.abs(x) < 0.5 && Math.abs(v) < 20) {
+        move(to);
+        return done?.();
+      }
+      move(to + x);
+      s.current.raf = requestAnimationFrame(step);
+    };
+    s.current.raf = requestAnimationFrame(step);
+  };
+  return {
+    onPointerDown(e: PointerEvent<HTMLElement>) {
+      // Phones only: there the dialog is a bottom sheet, so dragging down matches where it came from.
+      if ((e.target as HTMLElement).closest("button") || !matchMedia("(max-width: 600px)").matches) return;
+      cancelAnimationFrame(s.current.raf); // grab it mid-flight and keep going from where it is
+      e.currentTarget.setPointerCapture(e.pointerId);
+      Object.assign(s.current, { on: true, grab: e.clientY - s.current.y, last: e.clientY, t: e.timeStamp, v: 0 });
+      dialog.current!.style.transition = "none";
+    },
+    onPointerMove(e: PointerEvent<HTMLElement>) {
+      if (!s.current.on) return;
+      const dt = e.timeStamp - s.current.t;
+      if (dt > 0) s.current.v = 0.8 * (((e.clientY - s.current.last) / dt) * 1000) + 0.2 * s.current.v;
+      Object.assign(s.current, { last: e.clientY, t: e.timeStamp });
+      const y = e.clientY - s.current.grab;
+      move(y >= 0 ? y : rubberband(y, dialog.current!.offsetHeight));
+    },
+    onPointerUp(e: PointerEvent<HTMLElement>) {
+      if (!s.current.on) return;
+      s.current.on = false;
+      if (e.timeStamp - s.current.t > 80) s.current.v = 0; // finger stopped before lifting: no throw
+      const h = dialog.current!.offsetHeight;
+      const close = () => {
+        dialog.current!.close();
+        dialog.current!.style.transition = "";
+        move(0);
+      };
+      if (s.current.y + project(s.current.v) > h / 2) settle(h, close);
+      else settle(0, () => void (dialog.current!.style.transition = ""));
+    },
+  };
+}
 
 export default function Dashboard() {
   const { t, lang } = useApp();
   const money = useMoney();
-  const [fleet, setFleet] = useState<Fleet | null>(null);
-  const [reqs, setReqs] = useState<Req[]>([]);
+  const fleetRes = useApi<Fleet>("/fleet");
+  const fleet = fleetRes.data ?? null;
+  const [token, setToken] = useState("");
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    try {
+      setToken(sessionStorage.getItem(KEY) ?? "");
+    } catch {}
+    setAdmin(location.hash === "#admin");
+  }, []);
+  const reqs = useApi<Req[]>(token ? "/requests" : null, token);
+  const saveToken = (v: string) => {
+    setToken(v);
+    try {
+      if (v) sessionStorage.setItem(KEY, v);
+      else sessionStorage.removeItem(KEY);
+    } catch {}
+  };
+  const unlock = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    saveToken(String(new FormData(e.currentTarget).get("key") ?? "").trim());
+  };
   const [risk, setRisk] = useState<string>("all");
   const [q, setQ] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0);
   const openForm = () => (setFormKey((k) => k + 1), dialog.current?.showModal());
-
-  const loadReqs = useCallback(() => api<Req[]>("/requests").then(setReqs).catch(() => {}), []);
-  useEffect(() => {
-    api<Fleet>("/fleet").then(setFleet).catch(() => {});
-    loadReqs();
-  }, [loadReqs]);
+  const drag = useSheetDrag(dialog);
   useFx(`${lang}${!!fleet}`);
 
   const date = (s: string) => new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { dateStyle: "medium" }).format(new Date(s));
@@ -58,6 +134,7 @@ export default function Dashboard() {
           <button className="btn" onClick={openForm}><Icon name="plus" size={18} />{t.dash.newRequest}</button>
         </div>
 
+        {fleetRes.status !== undefined && <LoadError onRetry={fleetRes.retry} />}
         <div className="kpis">
           {kpis.map(([k, v, icon], i) => (
             <div key={k} className={`kpi spot reveal d${i}`}>
@@ -73,7 +150,7 @@ export default function Dashboard() {
               <span>{t.dash.kpi.saved}</span>
             </div>
           )}
-          {!fleet && [0, 1, 2, 3].map((i) => <div key={i} className="kpi"><span className="skeleton tall" /></div>)}
+          {!fleet && fleetRes.status === undefined && [0, 1, 2, 3].map((i) => <div key={i} className="kpi"><span className="skeleton tall" /></div>)}
         </div>
 
         <div className="dash-grid">
@@ -114,14 +191,14 @@ export default function Dashboard() {
           <header className="panel-head wrap">
             <h2>{t.dash.vehicles}</h2>
             <div className="tools">
-              <div className="segmented" role="tablist">
+              <div className="segmented" role="group" aria-label={t.dash.filter}>
                 {["all", "high", "medium", "low"].map((k) => (
-                  <button key={k} role="tab" aria-selected={risk === k} className={risk === k ? "on" : ""} onClick={() => setRisk(k)}>
+                  <button key={k} aria-pressed={risk === k} className={risk === k ? "on" : ""} onClick={() => setRisk(k)}>
                     {k === "all" ? t.dash.all : t.risk[k]}
                   </button>
                 ))}
               </div>
-              <label className="search"><Icon name="search" size={16} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.dash.search} /></label>
+              <label className="search"><Icon name="search" size={16} /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.dash.search} aria-label={t.dash.search} /></label>
             </div>
           </header>
           <div className="table">
@@ -144,32 +221,52 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="panel reveal">
-          <header className="panel-head"><h2>{t.dash.requests}</h2></header>
-          {reqs.length ? (
-            <ul className="reqs">
-              {reqs.map((r) => (
-                <li key={r.id}>
-                  <span className="avatar">{r.company.slice(0, 1)}</span>
-                  <div><b>{r.company}</b><small className="muted">{r.name} · {name(t.cities, r.city)}</small></div>
-                  <span className="pill">{fmt(r.fleet_size, lang)} {t.dash.vehicles}</span>
-                  <small className="muted">{date(r.created.replace(" ", "T") + "Z")}</small>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="empty">{t.dash.noRequests}</p>
-          )}
-        </section>
+        {(admin || token) && (
+          <section className="panel">
+            <header className="panel-head">
+              <h2>{t.dash.requests}</h2>
+              {token && <button className="btn btn-sm btn-ghost" onClick={() => saveToken("")}>{t.dash.logout}</button>}
+            </header>
+            {!token || reqs.status === 401 ? (
+              <form className="unlock" onSubmit={unlock}>
+                <label className="field">
+                  <span>{token ? t.dash.badKey : t.dash.adminHint}</span>
+                  <input name="key" type="password" autoComplete="off" dir="ltr" aria-label={t.dash.adminKey} placeholder={t.dash.adminKey} required />
+                </label>
+                <button className="btn">{t.dash.unlock}</button>
+              </form>
+            ) : reqs.status === 404 ? (
+              <p className="empty">{t.dash.adminOff}</p>
+            ) : reqs.status !== undefined ? (
+              <LoadError onRetry={reqs.retry} />
+            ) : !reqs.data ? (
+              <span className="skeleton tall" />
+            ) : reqs.data.length ? (
+              <ul className="reqs">
+                {reqs.data.map((r) => (
+                  <li key={r.id}>
+                    <span className="avatar">{r.company.slice(0, 1)}</span>
+                    <div><b>{r.company}</b><small className="muted">{r.name} · {name(t.cities, r.city)}</small></div>
+                    <span className="pill">{fmt(r.fleet_size, lang)} {t.dash.vehicles}</span>
+                    <small className="muted">{date(r.created.replace(" ", "T") + "Z")}</small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="empty">{t.dash.noRequests}</p>
+            )}
+          </section>
+        )}
       </main>
 
       <dialog ref={dialog} className="sheet" onClick={(e) => e.target === dialog.current && dialog.current.close()}>
         <div className="sheet-in">
-          <header className="panel-head">
+          <header className="panel-head sheet-drag" {...drag} onPointerCancel={drag.onPointerUp}>
+            <span className="grabber" aria-hidden />
             <h2>{t.form.title}</h2>
             <button className="icon-btn" onClick={() => dialog.current?.close()} aria-label={t.dash.close}><Icon name="close" size={18} /></button>
           </header>
-          <LeadForm key={formKey} onDone={loadReqs} />
+          <LeadForm key={formKey} onDone={token ? reqs.retry : undefined} />
         </div>
       </dialog>
     </>

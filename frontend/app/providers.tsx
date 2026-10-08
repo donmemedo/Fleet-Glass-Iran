@@ -12,6 +12,7 @@ export function Providers({ lang: initial, children }: { lang: Lang; children: R
   const [theme, setTheme] = useState<Theme>("light");
   useEffect(() => {
     setTheme(document.documentElement.dataset.theme as Theme);
+    addEventListener("touchstart", () => {}, { passive: true }); // iOS Safari only applies :active press styles with a touch listener
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
 

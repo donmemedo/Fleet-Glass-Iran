@@ -7,6 +7,45 @@ import type { Lang } from "./i18n";
 export const api = <T,>(path: string, init?: RequestInit): Promise<T> =>
   fetch(`/api${path}`, { headers: { "Content-Type": "application/json" }, ...init }).then((r) => (r.ok ? r.json() : Promise.reject(r)));
 
+/** GET with loading and error state; `path` null skips the call. `status` is set on failure (0 = network). */
+export function useApi<T>(path: string | null, token?: string) {
+  const [res, setRes] = useState<{ data?: T; status?: number }>({});
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (!path) return setRes({});
+    let live = true;
+    setRes((r) => ({ data: r.data }));
+    api<T>(path, token ? { headers: { authorization: `Bearer ${token}` } } : undefined).then(
+      (data) => live && setRes({ data }),
+      (r: unknown) => live && setRes({ status: r instanceof Response ? r.status : 0 }),
+    );
+    return () => void (live = false);
+  }, [path, token, attempt]);
+  return { ...res, retry: () => setAttempt((n) => n + 1) };
+}
+
+export function LoadError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useApp();
+  return (
+    <p className="load-error" role="alert">
+      {t.load.fail}
+      <button className="btn btn-sm btn-ghost" onClick={onRetry}>{t.load.retry}</button>
+    </p>
+  );
+}
+
+/** Calls fn at most once per animation frame, with the latest arguments: one layout read per frame, not per event. */
+export function perFrame<A extends unknown[]>(fn: (...a: A) => void) {
+  let id = 0;
+  let last: A;
+  return (...a: A) => {
+    last = a;
+    id ||= requestAnimationFrame(() => ((id = 0), fn(...last)));
+  };
+}
+
+export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export const fmt = (n: number, lang: Lang, digits = 1) =>
   new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: digits }).format(n);
 
@@ -99,13 +138,13 @@ export function useFx(dep?: unknown) {
       { rootMargin: "0px 0px -8% 0px" },
     );
     document.querySelectorAll(".reveal:not(.in)").forEach((el) => io.observe(el));
-    const move = (e: PointerEvent) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>(".spot");
+    const move = perFrame((e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.<HTMLElement>(".spot");
       if (!el) return;
       const r = el.getBoundingClientRect();
       el.style.setProperty("--mx", `${e.clientX - r.left}px`);
       el.style.setProperty("--my", `${e.clientY - r.top}px`);
-    };
+    });
     addEventListener("pointermove", move, { passive: true });
     return () => (io.disconnect(), removeEventListener("pointermove", move));
   }, [dep]);
@@ -117,6 +156,7 @@ export function CountUp({ to, digits = 0 }: { to: number; digits?: number }) {
   const [v, setV] = useState(0);
   useEffect(() => {
     const el = ref.current!;
+    if (reducedMotion()) return setV(to);
     let raf = 0, timer = 0;
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
@@ -156,7 +196,7 @@ const toLatin = (s: string) => s.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵
 export function LeadForm({ onDone }: { onDone?: () => void }) {
   const { t } = useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
+  const [state, setState] = useState<"idle" | "sending" | "ok" | "fail" | "busy">("idle");
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -165,6 +205,7 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
     data.phone = data.phone.replace(/[\s-]/g, "");
     const errs: Record<string, string> = {};
     for (const k of ["company", "name", "phone", "fleet_size", "city"]) if (!data[k]) errs[k] = t.form.required;
+    if (data.fleet_size && !/^\d+$/.test(data.fleet_size)) errs.fleet_size = t.form.badNumber;
     if (data.phone && !PHONE.test(data.phone)) errs.phone = t.form.badPhone;
     setErrors(errs);
     if (Object.keys(errs).length) return;
@@ -174,8 +215,8 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
       setState("ok");
       form.reset();
       onDone?.();
-    } catch {
-      setState("fail");
+    } catch (r) {
+      setState(r instanceof Response && r.status === 429 ? "busy" : "fail");
     }
   }
 
@@ -204,7 +245,9 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
         {field("fleet_size", t.form.fleet, { inputMode: "numeric", dir: "ltr", placeholder: "120" })}
       </div>
       {field("city", t.form.city)}
-      {state === "fail" && <p className="form-fail" role="alert">{t.form.fail}</p>}
+      {/* Honeypot: invisible to people and skipped by keyboard; bots that fill it get a fake success. */}
+      <input name="website" className="hp" tabIndex={-1} autoComplete="off" aria-hidden />
+      {(state === "fail" || state === "busy") && <p className="form-fail" role="alert">{state === "busy" ? t.form.tooMany : t.form.fail}</p>}
       <button className="btn btn-lg btn-block" disabled={state === "sending"}>{state === "sending" ? t.form.sending : t.form.submit}</button>
     </form>
   );

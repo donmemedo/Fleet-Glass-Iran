@@ -46,6 +46,7 @@ const fa = {
     saved: "صرفه‌جویی سالانه",
     downtime: "روز توقف کمتر",
     note: "برآورد بر اساس میانگین قیمت تعمیر ۱٫۸ و تعویض ۱۲ میلیون تومان.",
+    noSave: "با این تعداد ترک، بازدید منظم هنوز به‌صرفه نیست.",
   },
   pricing: {
     kicker: "تعرفه‌ها",
@@ -67,6 +68,8 @@ const fa = {
     submit: "ثبت درخواست", sending: "در حال ارسال…",
     ok: "درخواست شما ثبت شد. به‌زودی با شما تماس می‌گیریم.",
     required: "اینجا را خالی نگذارید", badPhone: "شماره موبایل نادرست است", fail: "ارسال نشد. دوباره تلاش کنید.",
+    tooMany: "تعداد درخواست‌ها زیاد است. یک دقیقه دیگر دوباره تلاش کنید.",
+    badNumber: "یک عدد بنویسید",
   },
   footer: { tag: "تهران · کرج · به‌زودی کلان‌شهرهای دیگر", rights: "© ۱۴۰۵ ایران‌گلس‌فلیت" },
   dash: {
@@ -76,7 +79,9 @@ const fa = {
     vehicles: "خودروها", search: "جستجوی پلاک یا خودرو", all: "همه",
     cols: { plate: "پلاک", model: "خودرو", city: "شهر", risk: "ریسک", crack: "ترک", status: "وضعیت", last: "آخرین بازدید" },
     mm: "میلی‌متر", empty: "خودرویی پیدا نشد", requests: "درخواست‌های اخیر", noRequests: "هنوز درخواستی ثبت نشده",
-    newRequest: "درخواست بازدید", close: "بستن",
+    newRequest: "درخواست بازدید", close: "بستن", filter: "فیلتر ریسک",
+    adminHint: "برای دیدن درخواست‌ها، کلید مدیریت را وارد کنید.", adminKey: "کلید مدیریت", unlock: "ورود", logout: "خروج",
+    badKey: "کلید نادرست است", adminOff: "فهرست درخواست‌ها روی این سرور غیرفعال است.",
     months: ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور"],
   },
   risk: { low: "کم", medium: "متوسط", high: "زیاد" } as Record<string, string>,
@@ -87,6 +92,7 @@ const fa = {
     "Kia Sportage": "کیا اسپورتیج", "Hyundai H350": "هیوندای H350", "Foton Van": "ون فوتون", "Peugeot 207": "پژو ۲۰۷",
   } as Record<string, string>,
   money: { k: "هزار تومان", m: "میلیون تومان", b: "میلیارد تومان" },
+  load: { fail: "اطلاعات دریافت نشد.", retry: "تلاش دوباره" },
 };
 
 export type Dict = typeof fa;
@@ -138,6 +144,7 @@ const en: Dict = {
     saved: "Yearly savings",
     downtime: "fewer downtime days",
     note: "Estimate based on an average repair of 1.8M and replacement of 12M Toman.",
+    noSave: "At this chip rate, regular checks don't pay off yet.",
   },
   pricing: {
     kicker: "Pricing",
@@ -159,6 +166,8 @@ const en: Dict = {
     submit: "Send request", sending: "Sending…",
     ok: "Request received. We'll be in touch soon.",
     required: "This field is required", badPhone: "This mobile number isn't valid", fail: "Couldn't send. Please try again.",
+    tooMany: "Too many requests. Please try again in a minute.",
+    badNumber: "Enter a number",
   },
   footer: { tag: "Tehran · Karaj · more cities soon", rights: "© 2026 IranGlassFleet" },
   dash: {
@@ -168,7 +177,9 @@ const en: Dict = {
     vehicles: "Vehicles", search: "Search plate or vehicle", all: "All",
     cols: { plate: "Plate", model: "Vehicle", city: "City", risk: "Risk", crack: "Chip", status: "Status", last: "Last check" },
     mm: "mm", empty: "No vehicles found", requests: "Recent requests", noRequests: "No requests yet",
-    newRequest: "Request a check", close: "Close",
+    newRequest: "Request a check", close: "Close", filter: "Filter by risk",
+    adminHint: "Enter the admin key to see requests.", adminKey: "Admin key", unlock: "Log in", logout: "Log out",
+    badKey: "That key isn't valid", adminOff: "The request list is turned off on this server.",
     months: ["Apr", "May", "Jun", "Jul", "Aug", "Sep"],
   },
   risk: { low: "Low", medium: "Medium", high: "High" },
@@ -176,6 +187,7 @@ const en: Dict = {
   cities: {},
   models: {},
   money: { k: "K Toman", m: "M Toman", b: "B Toman" },
+  load: { fail: "Couldn't load data.", retry: "Try again" },
 };
 
 export const dict = { fa, en };

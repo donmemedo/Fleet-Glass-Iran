@@ -1,5 +1,7 @@
 // ponytail: hand-written SW. Swap for Serwist/Workbox if precaching or background sync is ever needed.
-const CACHE = "igf-v1";
+const CACHE = "igf-v2"; // bumping the name deletes v1, which may hold the old public lead list
+// Only public, non-personal API data is ever cached. Anything else under /api/ goes straight to the network.
+const API = ["/api/stats", "/api/plans", "/api/fleet"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/dashboard"])));
@@ -23,6 +25,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;
+  if (url.pathname.startsWith("/api/") && !API.includes(url.pathname)) return;
   // Hashed build assets and icons never change: cache first.
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res))));
