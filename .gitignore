@@ -7,3 +7,5 @@ __pycache__
 Docs
 .idea
 *.tsbuildinfo
+graphify-out
+HANDOFF.md
