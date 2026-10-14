@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Vazirmatn } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Providers } from "./providers";
 import type { Lang } from "./i18n";
 import "./globals.css";
@@ -27,10 +27,11 @@ const themeScript = `try{var t=localStorage.getItem('theme')}catch(e){}document.
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const lang: Lang = (await cookies()).get("lang")?.value === "en" ? "en" : "fa";
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang={lang} dir={lang === "fa" ? "rtl" : "ltr"} className={`${vazir.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
         <Providers lang={lang}>{children}</Providers>

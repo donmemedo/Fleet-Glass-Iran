@@ -1,0 +1,12 @@
+# Weekly dependency and base-image update PRs; security advisories open PRs as soon as they are published.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directories: [/frontend, /mobile]
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule: { interval: weekly }

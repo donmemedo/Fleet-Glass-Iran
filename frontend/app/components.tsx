@@ -7,8 +7,53 @@ import type { Lang } from "./i18n";
 export const api = <T,>(path: string, init?: RequestInit): Promise<T> =>
   fetch(`/api${path}`, { headers: { "Content-Type": "application/json" }, ...init }).then((r) => (r.ok ? r.json() : Promise.reject(r)));
 
-export const fmt = (n: number, lang: Lang, digits = 1) =>
-  new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: digits }).format(n);
+/** GET with loading and error state; `path` null skips the call. `status` is set on failure (0 = network). */
+export function useApi<T>(path: string | null, token?: string) {
+  const [res, setRes] = useState<{ data?: T; status?: number }>({});
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (!path) return setRes({});
+    let live = true;
+    setRes((r) => ({ data: r.data }));
+    api<T>(path, token ? { headers: { authorization: `Bearer ${token}` } } : undefined).then(
+      (data) => live && setRes({ data }),
+      (r: unknown) => live && setRes({ status: r instanceof Response ? r.status : 0 }),
+    );
+    return () => void (live = false);
+  }, [path, token, attempt]);
+  return { ...res, retry: () => setAttempt((n) => n + 1) };
+}
+
+export function LoadError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useApp();
+  return (
+    <p className="load-error" role="alert">
+      {t.load.fail}
+      <button className="btn btn-sm btn-ghost" onClick={onRetry}>{t.load.retry}</button>
+    </p>
+  );
+}
+
+/** Calls fn at most once per animation frame, with the latest arguments: one layout read per frame, not per event. */
+export function perFrame<A extends unknown[]>(fn: (...a: A) => void) {
+  let id = 0;
+  let last: A;
+  return (...a: A) => {
+    last = a;
+    id ||= requestAnimationFrame(() => ((id = 0), fn(...last)));
+  };
+}
+
+export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Intl formatters are expensive to construct; the dashboard formats hundreds of numbers per keystroke.
+const numberFormats = new Map<string, Intl.NumberFormat>();
+export function fmt(n: number, lang: Lang, digits = 1) {
+  const key = `${lang}${digits}`;
+  let f = numberFormats.get(key);
+  if (!f) numberFormats.set(key, (f = new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: digits })));
+  return f.format(n);
+}
 
 /** Amount in million Toman → human string. */
 export function useMoney() {
@@ -53,7 +98,7 @@ export const Logo = () => (
 );
 
 export function Nav({ links = true }: { links?: boolean }) {
-  const { t, theme, toggleLang, toggleTheme } = useApp();
+  const { t, lang, theme, toggleLang, toggleTheme } = useApp();
   const [scrolled, setScrolled] = useState(false);
   // Chromium/Android install prompt; iOS installs via Share → Add to Home Screen.
   const [install, setInstall] = useState<(Event & { prompt: () => void }) | null>(null);
@@ -68,7 +113,7 @@ export function Nav({ links = true }: { links?: boolean }) {
   return (
     <header className={`nav ${scrolled ? "scrolled" : ""}`}>
       <div className="nav-in">
-        <Link href="/" className="brand"><Logo /><span>{t.brand}</span></Link>
+        <Link href="/" className="brand" aria-label={t.brand}><Logo /><span>{t.brand}</span></Link>
         {links && (
           <nav className="nav-links">
             <a href="/#services">{t.nav.services}</a>
@@ -77,8 +122,8 @@ export function Nav({ links = true }: { links?: boolean }) {
           </nav>
         )}
         <div className="nav-actions">
-          {install && <button className="icon-btn" onClick={() => (install.prompt(), setInstall(null))}><Icon name="download" size={18} /><span>{t.nav.install}</span></button>}
-          <button className="icon-btn" onClick={toggleLang} aria-label="Language"><Icon name="globe" size={18} /><span>{t.nav.lang}</span></button>
+          {install && <button className="icon-btn" aria-label={t.nav.install} onClick={() => (install.prompt(), setInstall(null))}><Icon name="download" size={18} /><span className="opt">{t.nav.install}</span></button>}
+          <button className="icon-btn" onClick={toggleLang} aria-label={t.nav.langLabel}><Icon name="globe" size={18} /><span lang={lang === "fa" ? "en" : "fa"}>{t.nav.lang}</span></button>
           <button className="icon-btn" onClick={toggleTheme} aria-label={t.nav.theme}><Icon name={theme === "dark" ? "sun" : "moon"} size={18} /></button>
           {links ? (
             <Link href="/dashboard" className="btn btn-sm">{t.nav.dashboard}</Link>
@@ -99,13 +144,13 @@ export function useFx(dep?: unknown) {
       { rootMargin: "0px 0px -8% 0px" },
     );
     document.querySelectorAll(".reveal:not(.in)").forEach((el) => io.observe(el));
-    const move = (e: PointerEvent) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>(".spot");
+    const move = perFrame((e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.<HTMLElement>(".spot");
       if (!el) return;
       const r = el.getBoundingClientRect();
       el.style.setProperty("--mx", `${e.clientX - r.left}px`);
       el.style.setProperty("--my", `${e.clientY - r.top}px`);
-    };
+    });
     addEventListener("pointermove", move, { passive: true });
     return () => (io.disconnect(), removeEventListener("pointermove", move));
   }, [dep]);
@@ -117,6 +162,7 @@ export function CountUp({ to, digits = 0 }: { to: number; digits?: number }) {
   const [v, setV] = useState(0);
   useEffect(() => {
     const el = ref.current!;
+    if (reducedMotion()) return setV(to);
     let raf = 0, timer = 0;
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
@@ -136,11 +182,13 @@ export function CountUp({ to, digits = 0 }: { to: number; digits?: number }) {
   return <span ref={ref}>{fmt(v, lang, digits)}</span>;
 }
 
+const PLATE_DIGITS = new Intl.NumberFormat("fa-IR", { useGrouping: false });
+
 /** Iranian license plate: "12ب345-68". Plates always read LTR with Persian digits. */
 export function Plate({ value }: { value: string }) {
   const m = value.match(/^(\d{2})(\D)(\d{3})-(\d{2})$/);
   if (!m) return <span>{value}</span>;
-  const d = (s: string) => Number(s).toLocaleString("fa-IR", { useGrouping: false });
+  const d = (s: string) => PLATE_DIGITS.format(Number(s));
   return (
     <span className="plate" dir="ltr">
       <span className="plate-flag"><i /><b>I.R.<br />IRAN</b></span>
@@ -151,12 +199,12 @@ export function Plate({ value }: { value: string }) {
 }
 
 const PHONE = /^(\+98|0)?9\d{9}$/;
-const toLatin = (s: string) => s.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/[٠-٩]/g, (c) => String("٠١٢٣٤٥٦٧٨٩".indexOf(c)));
+export const toLatin = (s: string) => s.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/[٠-٩]/g, (c) => String("٠١٢٣٤٥٦٧٨٩".indexOf(c)));
 
 export function LeadForm({ onDone }: { onDone?: () => void }) {
   const { t } = useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [state, setState] = useState<"idle" | "sending" | "ok" | "fail">("idle");
+  const [state, setState] = useState<"idle" | "sending" | "ok" | "fail" | "busy">("idle");
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -165,6 +213,7 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
     data.phone = data.phone.replace(/[\s-]/g, "");
     const errs: Record<string, string> = {};
     for (const k of ["company", "name", "phone", "fleet_size", "city"]) if (!data[k]) errs[k] = t.form.required;
+    if (data.fleet_size && !/^\d+$/.test(data.fleet_size)) errs.fleet_size = t.form.badNumber;
     if (data.phone && !PHONE.test(data.phone)) errs.phone = t.form.badPhone;
     setErrors(errs);
     if (Object.keys(errs).length) return;
@@ -174,22 +223,27 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
       setState("ok");
       form.reset();
       onDone?.();
-    } catch {
-      setState("fail");
+    } catch (r) {
+      setState(r instanceof Response && r.status === 429 ? "busy" : "fail");
     }
   }
 
   const field = (name: string, label: string, props: Record<string, unknown> = {}) => (
     <label className={`field ${errors[name] ? "has-error" : ""}`}>
       <span>{label}</span>
-      <input name={name} {...props} aria-invalid={!!errors[name]} />
+      <input
+        name={name}
+        {...props}
+        aria-invalid={!!errors[name]}
+        onInput={() => errors[name] && setErrors(({ [name]: _, ...rest }) => rest)}
+      />
       {errors[name] && <small role="alert">{errors[name]}</small>}
     </label>
   );
 
   if (state === "ok")
     return (
-      <div className="form-ok" role="status">
+      <div className="form-ok" role="status" tabIndex={-1} ref={(el) => el?.focus()}>
         <span className="ok-badge"><Icon name="check" size={34} /></span>
         <p>{t.form.ok}</p>
       </div>
@@ -204,7 +258,9 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
         {field("fleet_size", t.form.fleet, { inputMode: "numeric", dir: "ltr", placeholder: "120" })}
       </div>
       {field("city", t.form.city)}
-      {state === "fail" && <p className="form-fail" role="alert">{t.form.fail}</p>}
+      {/* Honeypot: invisible to people and skipped by keyboard; bots that fill it get a fake success. */}
+      <input name="website" className="hp" tabIndex={-1} autoComplete="off" aria-hidden />
+      {(state === "fail" || state === "busy") && <p className="form-fail" role="alert">{state === "busy" ? t.form.tooMany : t.form.fail}</p>}
       <button className="btn btn-lg btn-block" disabled={state === "sending"}>{state === "sending" ? t.form.sending : t.form.submit}</button>
     </form>
   );

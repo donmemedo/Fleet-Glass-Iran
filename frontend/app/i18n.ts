@@ -1,7 +1,7 @@
 // UX copy follows the Persian UX-writing vocabulary (پیش‌خوان، درخواست، نادرست، ...).
 const fa = {
   brand: "ایران‌گلس‌فلیت",
-  nav: { services: "خدمات", calc: "محاسبه‌گر", pricing: "تعرفه‌ها", dashboard: "پیش‌خوان", cta: "درخواست بازدید", lang: "EN", theme: "تغییر پوسته", home: "صفحه اصلی", install: "نصب" },
+  nav: { services: "خدمات", calc: "محاسبه‌گر", pricing: "تعرفه‌ها", dashboard: "پیش‌خوان", cta: "درخواست بازدید", lang: "EN", theme: "تغییر پوسته", home: "صفحه اصلی", install: "نصب", langLabel: "English" },
   hero: {
     eyebrow: "خدمات شیشه خودرو برای ناوگان سازمانی",
     t1: "شیشه سالم،",
@@ -13,6 +13,7 @@ const fa = {
     chip2: "پاسخ‌گویی زیر ۱۰ دقیقه",
     chip3: "۸۵٪ ارزان‌تر از تعویض",
     scan: "در حال بررسی",
+    alt: "بازدید و ترمیم ترک شیشه جلوی خودرو",
   },
   stats: { caption: "اهداف سال اول", fleets: "قرارداد ناوگانی", vehicles: "بازدید خودرو در سال", sla: "دقیقه پاسخ‌گویی", renewal: "٪ تمدید قرارداد" },
   services: {
@@ -21,8 +22,8 @@ const fa = {
     items: [
       { t: "تعمیر و تعویض شیشه", d: "ترک‌های تا اندازه یک سکه با رزین تعمیر می‌شوند؛ آسیب‌های بزرگ‌تر با تعویض و آب‌بندی گارانتی‌دار." },
       { t: "بازدید ناوگان در محل", d: "تیم سیار ما خودروهای پارک‌شده را بررسی می‌کند. راننده لازم نیست جایی برود." },
-      { t: "مدیر حساب اختصاصی", d: "خط اختصاصی، SLA پاسخ‌گویی، جلسه ماهانه و تخفیف حجمی برای مدیر ناوگان." },
-      { t: "گزارش و پیش‌خوان داده", d: "پروفایل هر خودرو، عکس‌ها، سطح ریسک و خروجی اکسل یا API." },
+      { t: "مدیر حساب اختصاصی", d: "خط اختصاصی، تعهد زمان پاسخ‌گویی، جلسه ماهانه و تخفیف حجمی برای مدیر ناوگان." },
+      { t: "گزارش و پیش‌خوان داده", d: "پرونده هر خودرو، عکس‌ها، سطح ریسک و خروجی اکسل یا API." },
     ],
   },
   steps: {
@@ -32,7 +33,7 @@ const fa = {
       { t: "بازدید آزمایشی", d: "۳۰ تا ۱۰۰ خودرو را رایگان بررسی می‌کنیم." },
       { t: "گزارش فوری", d: "گزارش عکس‌دار با اولویت‌بندی ریسک." },
       { t: "تعمیر همان‌جا", d: "ترک‌های قابل تعمیر را همان روز رفع می‌کنیم." },
-      { t: "قرارداد سالانه", d: "بازدید دوره‌ای، SLA و پیش‌خوان اختصاصی." },
+      { t: "قرارداد سالانه", d: "بازدید دوره‌ای، تعهد پاسخ‌گویی و پیش‌خوان اختصاصی." },
     ],
   },
   calc: {
@@ -46,6 +47,7 @@ const fa = {
     saved: "صرفه‌جویی سالانه",
     downtime: "روز توقف کمتر",
     note: "برآورد بر اساس میانگین قیمت تعمیر ۱٫۸ و تعویض ۱۲ میلیون تومان.",
+    noSave: "با این تعداد ترک، بازدید منظم هنوز به‌صرفه نیست.",
   },
   pricing: {
     kicker: "تعرفه‌ها",
@@ -53,7 +55,7 @@ const fa = {
     plans: { check: "بازدید", care: "مراقبت", enterprise: "سازمانی" } as Record<string, string>,
     units: { vehicle: "هر خودرو", vehicle_month: "هر خودرو در ماه", month: "در ماه" } as Record<string, string>,
     features: {
-      onsite: "بازدید در محل", photo_report: "گزارش عکس‌دار", risk: "اولویت‌بندی ریسک", sla: "SLA پاسخ‌گویی ۱۰ دقیقه",
+      onsite: "بازدید در محل", photo_report: "گزارش عکس‌دار", risk: "اولویت‌بندی ریسک", sla: "تعهد پاسخ‌گویی ۱۰ دقیقه‌ای",
       priority: "اولویت تیم سیار", dashboard: "پیش‌خوان اختصاصی", api: "خروجی اکسل و API",
     } as Record<string, string>,
     popular: "محبوب",
@@ -67,16 +69,20 @@ const fa = {
     submit: "ثبت درخواست", sending: "در حال ارسال…",
     ok: "درخواست شما ثبت شد. به‌زودی با شما تماس می‌گیریم.",
     required: "اینجا را خالی نگذارید", badPhone: "شماره موبایل نادرست است", fail: "ارسال نشد. دوباره تلاش کنید.",
+    tooMany: "تعداد درخواست‌ها زیاد است. یک دقیقه دیگر دوباره تلاش کنید.",
+    badNumber: "یک عدد بنویسید",
   },
   footer: { tag: "تهران · کرج · به‌زودی کلان‌شهرهای دیگر", rights: "© ۱۴۰۵ ایران‌گلس‌فلیت" },
   dash: {
     title: "پیش‌خوان ناوگان", hello: "سلام، مدیر ناوگان", company: "شرکت پخش نمونه", demo: "نمونه",
     kpi: { covered: "خودرو تحت پوشش", open: "ترک باز", repaired: "تعمیر در ۶ ماه", saved: "صرفه‌جویی" },
     chart: "تعمیر در برابر تعویض", repair: "تعمیر", replace: "تعویض", riskMix: "توزیع ریسک",
-    vehicles: "خودروها", search: "جستجوی پلاک یا خودرو", all: "همه",
+    vehicles: "خودروها", unit: "خودرو", search: "جستجوی پلاک یا خودرو", all: "همه",
     cols: { plate: "پلاک", model: "خودرو", city: "شهر", risk: "ریسک", crack: "ترک", status: "وضعیت", last: "آخرین بازدید" },
     mm: "میلی‌متر", empty: "خودرویی پیدا نشد", requests: "درخواست‌های اخیر", noRequests: "هنوز درخواستی ثبت نشده",
-    newRequest: "درخواست بازدید", close: "بستن",
+    newRequest: "درخواست بازدید", close: "بستن", filter: "فیلتر ریسک",
+    adminHint: "برای دیدن درخواست‌ها، کلید مدیریت را وارد کنید.", adminKey: "کلید مدیریت", unlock: "ورود", logout: "خروج",
+    badKey: "کلید نادرست است", adminOff: "فهرست درخواست‌ها روی این سرور غیرفعال است.",
     months: ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور"],
   },
   risk: { low: "کم", medium: "متوسط", high: "زیاد" } as Record<string, string>,
@@ -87,13 +93,14 @@ const fa = {
     "Kia Sportage": "کیا اسپورتیج", "Hyundai H350": "هیوندای H350", "Foton Van": "ون فوتون", "Peugeot 207": "پژو ۲۰۷",
   } as Record<string, string>,
   money: { k: "هزار تومان", m: "میلیون تومان", b: "میلیارد تومان" },
+  load: { fail: "اطلاعات دریافت نشد.", retry: "تلاش دوباره" },
 };
 
 export type Dict = typeof fa;
 
 const en: Dict = {
   brand: "IranGlassFleet",
-  nav: { services: "Services", calc: "Calculator", pricing: "Pricing", dashboard: "Dashboard", cta: "Request a check", lang: "فا", theme: "Toggle theme", home: "Home", install: "Install" },
+  nav: { services: "Services", calc: "Calculator", pricing: "Pricing", dashboard: "Dashboard", cta: "Request a check", lang: "فا", theme: "Toggle theme", home: "Home", install: "Install", langLabel: "فارسی" },
   hero: {
     eyebrow: "Windshield care for company fleets",
     t1: "Clear glass.",
@@ -105,6 +112,7 @@ const en: Dict = {
     chip2: "Response under 10 min",
     chip3: "85% cheaper than replacing",
     scan: "Scanning",
+    alt: "A windshield chip being found and repaired",
   },
   stats: { caption: "Year-one targets", fleets: "Fleet contracts", vehicles: "Vehicle checks a year", sla: "Minute response SLA", renewal: "% contract renewal" },
   services: {
@@ -138,6 +146,7 @@ const en: Dict = {
     saved: "Yearly savings",
     downtime: "fewer downtime days",
     note: "Estimate based on an average repair of 1.8M and replacement of 12M Toman.",
+    noSave: "At this chip rate, regular checks don't pay off yet.",
   },
   pricing: {
     kicker: "Pricing",
@@ -159,16 +168,20 @@ const en: Dict = {
     submit: "Send request", sending: "Sending…",
     ok: "Request received. We'll be in touch soon.",
     required: "This field is required", badPhone: "This mobile number isn't valid", fail: "Couldn't send. Please try again.",
+    tooMany: "Too many requests. Please try again in a minute.",
+    badNumber: "Enter a number",
   },
   footer: { tag: "Tehran · Karaj · more cities soon", rights: "© 2026 IranGlassFleet" },
   dash: {
     title: "Fleet dashboard", hello: "Hello, fleet manager", company: "Sample Distribution Co.", demo: "Demo",
     kpi: { covered: "Vehicles covered", open: "Open issues", repaired: "Repairs in 6 months", saved: "Saved" },
     chart: "Repair vs replacement", repair: "Repair", replace: "Replace", riskMix: "Risk mix",
-    vehicles: "Vehicles", search: "Search plate or vehicle", all: "All",
+    vehicles: "Vehicles", unit: "vehicles", search: "Search plate or vehicle", all: "All",
     cols: { plate: "Plate", model: "Vehicle", city: "City", risk: "Risk", crack: "Chip", status: "Status", last: "Last check" },
     mm: "mm", empty: "No vehicles found", requests: "Recent requests", noRequests: "No requests yet",
-    newRequest: "Request a check", close: "Close",
+    newRequest: "Request a check", close: "Close", filter: "Filter by risk",
+    adminHint: "Enter the admin key to see requests.", adminKey: "Admin key", unlock: "Log in", logout: "Log out",
+    badKey: "That key isn't valid", adminOff: "The request list is turned off on this server.",
     months: ["Apr", "May", "Jun", "Jul", "Aug", "Sep"],
   },
   risk: { low: "Low", medium: "Medium", high: "High" },
@@ -176,6 +189,7 @@ const en: Dict = {
   cities: {},
   models: {},
   money: { k: "K Toman", m: "M Toman", b: "B Toman" },
+  load: { fail: "Couldn't load data.", retry: "Try again" },
 };
 
 export const dict = { fa, en };

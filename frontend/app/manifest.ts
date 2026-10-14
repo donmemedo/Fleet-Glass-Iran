@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "ایران‌گلس‌فلیت · IranGlassFleet",
     short_name: "ایران‌گلس",
-    description: "بازدید، تعمیر و SLA شیشه خودرو برای ناوگان سازمانی",
+    description: "بازدید و تعمیر شیشه خودرو با تعهد پاسخ‌گویی، برای ناوگان سازمانی",
     start_url: "/",
     scope: "/",
     display: "standalone",
