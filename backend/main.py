@@ -78,8 +78,6 @@ with db() as con:
             fleet_size INTEGER, city TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP)"""
     )
 
-# Prices in million Toman, from the business plan (pricing section). The web calculator mirrors these in frontend/app/quote.ts.
-PRICES = {"inspection": 0.25, "repair": 1.8, "replace": 12.0}
 
 # ponytail: demo fleet is generated from a fixed seed, swap for a vehicles table when real data arrives.
 MODELS = ["Peugeot Pars", "Samand", "Dena Plus", "Tara", "Shahin", "Arisan", "Kia Sportage", "Hyundai H350", "Foton Van", "Peugeot 207"]
@@ -129,7 +127,7 @@ STATIC = {
         "vehicles": FLEET,
         "risk": _risk,
         "months": [{"m": m, "repair": r, "replace": p} for m, r, p in zip(range(1, 7), [42, 55, 61, 70, 84, 96], [18, 16, 14, 12, 11, 9])],
-        "kpi": {"covered": len(FLEET), "open": _risk["medium"] + _risk["high"], "repaired": 96, "saved": round(96 * (PRICES["replace"] - PRICES["repair"]), 1)},
+        "kpi": {"covered": len(FLEET), "open": _risk["medium"] + _risk["high"], "repaired": 96, "saved": 979.2},  # 96 repairs × (12 − 1.8) M Toman saved vs replacing
     }),
 }
 
@@ -142,23 +140,24 @@ def _send_static(name: str, if_none_match: str):
     return Response(body, media_type="application/json", headers=headers)
 
 
+# Constant-payload routes are async: no blocking I/O, so they skip the threadpool hop.
 @app.get("/api/health")
-def health():
+async def health():
     return {"ok": True}
 
 
 @app.get("/api/stats")
-def stats(if_none_match: str = Header("")):
+async def stats(if_none_match: str = Header("")):
     return _send_static("stats", if_none_match)
 
 
 @app.get("/api/plans")
-def plans(if_none_match: str = Header("")):
+async def plans(if_none_match: str = Header("")):
     return _send_static("plans", if_none_match)
 
 
 @app.get("/api/fleet")
-def fleet(if_none_match: str = Header("")):
+async def fleet(if_none_match: str = Header("")):
     return _send_static("fleet", if_none_match)
 
 

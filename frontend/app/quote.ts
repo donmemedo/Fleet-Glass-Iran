@@ -1,4 +1,4 @@
-// Prices in million Toman, from the business plan; keep in sync with PRICES in backend/main.py.
+// Prices in million Toman, from the business plan (pricing section).
 export const PRICES = { inspection: 0.25, repair: 1.8, replace: 12 };
 
 export type Quote = { cracked: number; without: number; with: number; saved: number; downtimeDays: number };

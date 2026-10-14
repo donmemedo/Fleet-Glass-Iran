@@ -12,7 +12,7 @@ To report a vulnerability, contact the repository owner privately rather than op
 | Backend dependency advisories (pip-audit) | 7, all in Starlette 0.46.2 | 0 |
 | Frontend dependency advisories (npm audit) | 0 at the first audit, 8 published since | 0 |
 | Lead list with names and phone numbers | Public | Admin key required, phone never returned |
-| Server CPU per fleet API request (Next + FastAPI) | 10.7 ms | 9.5 ms |
+| Server CPU per fleet API request (Next + FastAPI) | 10.9 ms | 6.1 ms |
 | Fleet API bytes on the wire | 7,462 | 1,340 |
 
 ## Method
@@ -64,14 +64,14 @@ Found by the red, blue and SAST reviewers after the first round. Severities are 
 | R3, S2 | Low | A refund arriving after the minute rolled over lowered the next window's count, letting about one extra cap through per window. | Each request refunds exactly the window it was charged to. | Confirmed |
 | R4, S3 | Low | Paths such as `/api/constructor` matched inherited object properties and returned 500 with a stack trace in the log. | The allowlist is a `Map`, so only real endpoints match. | Confirmed |
 | R5 | Low | The unused image optimizer re-encoded images on every request because the read-only filesystem blocks its cache. | Turned off with `images.unoptimized`; the endpoint now answers 404. | Confirmed |
-| B3 | Low | Admin key guessing was not throttled. | 10 wrong keys per client per minute, then 429. A correct key costs nothing. | Confirmed |
+| B3 | Low | Admin key guessing was not throttled. | 10 wrong keys per client per minute, then 429. A correct key costs nothing. | Split: confirmed once, judged theoretical once given a 32+ character random key; kept as cheap defence in depth |
 | B5 | Low | The phone check accepted Persian and full-width digits; line separators and private-use characters were accepted in text. | `[0-9]` only; those character categories are rejected too. | Confirmed |
 | B7 | Low | `.env`, where `ADMIN_TOKEN` lives, was not git-ignored. | Ignored. | Confirmed |
 | B8 | Low | No log rotation or resource limits. | 10 MB × 3 rotated logs, 512 MB memory and 256 process limits per container. | Confirmed |
 | B4 | Info | CSP matcher exclusions were prefix matches, so some 404 pages had no CSP. | Exclusions end in `$`. | Confirmed, lowered from low |
 | B9 | Info | No dependency-update path. | Dependabot for pip, npm (web and mobile) and Docker. | Confirmed |
-| S4 | Info | Next 16.3.6, sharp and source-map-js fell inside newly published advisory ranges; none was reachable in this configuration. | Next 16.3.8, sharp 0.35.5, source-map-js 1.2.2. npm audit is clean. | __V_S4__ |
-| B6 | Info | No backup path for the lead database. | One-line SQLite backup in the README. | Rejected as a code defect; documented anyway |
+| S4 | Info | Next 16.3.6, sharp and source-map-js fell inside newly published advisory ranges; none was reachable in this configuration. | Next 16.3.8, sharp 0.35.5, source-map-js 1.2.2. npm audit is clean. | Confirmed |
+| B6 | Info | No backup path for the lead database. | One-line SQLite backup in the README. | Confirmed as an operational gap, not a code defect |
 | — | Low | Two test files held a raw right-to-left override character, which hides text in code review. The backend held raw zero-width joiners. | Written as `\u` escapes. | Found during the fix pass |
 | — | Info | The service worker would have stored a `no-store` or credentialed response if such a path were ever added to its allowlist. | It skips both; pages stay cached for offline use. | From the blue-team notes |
 
@@ -107,33 +107,42 @@ Two attacker goals, broken into the paths an outsider could try. Cost, skill and
 
 ## Performance
 
-Side by side on the same machine, under heavy load from other work, so absolute times are inflated but the comparison is fair.
+The old and new stacks ran side by side on the same machine. CPU time per request comes from the server process and does not depend on machine load. Latency was measured with interleaved requests, so load affects both stacks equally.
 
-Server CPU per request, which does not depend on load:
+Server CPU per request:
 
-| Request | Old CPU ms/req | New CPU ms/req |
+| Request | Before ms | After ms |
 | --- | --- | --- |
-| `/` (Next) | 22.15 | 22.05 |
-| `/dashboard` (Next) | 18.3 | 19.1 |
-| `/api/fleet` (Next) | 6.6 | 8.15 |
-| `/api/fleet` (FastAPI) | 4.1 | 1.35 |
+| `/` (Next, median of six runs) | 16.6 | 17.2 |
+| `/dashboard` (Next) | 16.9 | 18.0 |
+| `/api/fleet` (Next) | 7.2 | 5.2 |
+| `/api/fleet` (FastAPI) | 3.7 | 0.9 |
 
-Latency with interleaved requests (p50 / p95):
+Latency (p50 / p95) and bytes on the wire:
 
 | Path | Old p50 / p95 ms | New p50 / p95 ms | Old bytes | New bytes |
 | --- | --- | --- | --- | --- |
-| `/api/fleet` | 93.8 / 185.1 | 88.0 / 141.8 | 7462 | 1340 |
-| `/api/plans` | 71.7 / 167.2 | 62.4 / 123.1 | 342 | 342 |
-| `/api/stats` | 66.7 / 166.4 | 60.6 / 125.9 | 106 | 106 |
-| `/` | 183.1 / 352.6 | 240.7 / 392.5 | 6994 | 7252 |
-| `/dashboard` | 182.2 / 333.1 | 200.5 / 321.9 | 4753 | 4939 |
-| `/api/fleet` repeat visit (304) | n/a | 78.0 / 136.3 | n/a | 0 |
+| `/api/fleet` | 18.2 / 50.5 | 12.7 / 32.4 | 7462 | 1340 |
+| `/api/plans` | 14.2 / 39.4 | 14.3 / 37.6 | 342 | 163 |
+| `/api/stats` | 15.6 / 31.2 | 14.6 / 32.6 | 106 | 113 |
+| `/` | 32.4 / 81.2 | 37.0 / 93.5 | 6994 | 7287 |
+| `/dashboard` | 25.1 / 93.0 | 30.4 / 92.1 | 4753 | 5005 |
+| `/api/fleet` repeat visit (304) | n/a | 6.8 / 10.4 | n/a | 0 |
 
-- **Security headers and CSP cost nothing measurable.** The home page CPU is unchanged and the dashboard costs about 0.8 ms more. The higher home-page latency in the second table is load noise, because the CPU time per request is the same.
-- **The API got cheaper.** Payloads are serialized once at startup, so FastAPI's CPU per fleet request dropped from 4.1 to 1.35 ms. Gzip adds 1.5 ms in Next and cuts the payload 5.6×.
-- **Repeat visits send no body.** ETags turn them into 304 responses.
+- **The per-request CSP costs about 0.6 ms on the home page and 1.1 ms on the dashboard.** That is the nonce work and slightly larger HTML; the home-page difference is within run-to-run spread.
+- **The API is cheaper than before.** A fleet request costs 6.1 ms of CPU across both tiers instead of 10.9 ms. Payloads are serialized once at startup, constant routes skip the thread pool, and each payload is gzipped once per deploy.
+- **The fleet payload is 5.6 times smaller** on the wire, and repeat visits get a 304 with no body.
 
-__PERFREVIEW__
+The performance reviewer's findings, with the skeptic's verdict:
+
+| ID | Finding | Fix | Skeptic |
+| --- | --- | --- | --- |
+| P1 | Intl formatters were rebuilt for every row on every keystroke. | Formatters are built once per language. | Confirmed |
+| P2 | Constant-payload routes ran in the thread pool. | They are `async`. | Not a defect, kept for the measured CPU win |
+| P3 | The proxy re-compressed the same payload on every request. | Compressed once per ETag, bounded cache. | Not a defect at the reviewed commit; needed after round 2 removed the size gate |
+| P4 | The calculator's shimmer repainted every frame outside the hero. | Shimmer runs only in the hero, which pauses offscreen. | Confirmed |
+| P5 | A late pointer move could re-apply the hero tilt after the pointer left. | The reset goes through the same per-frame queue. | Confirmed |
+| P6 | Page requests waited for the service worker to boot. | Navigation preload is on. | Confirmed |
 
 ## UX
 
@@ -157,6 +166,10 @@ A dedicated UX reviewer then found more issues over two runs, six of them medium
 - **Persian copy.** Counts use the singular noun («۱۲۰ خودرو»). «تعهد پاسخ‌گویی» replaces «SLA», and «پرونده» replaces «پروفایل». The pricing buttons say «درخواست بازدید», which is what they do.
 - **Smaller fixes.** Searching plates with Persian digits now finds them. The donut shows a placeholder instead of «1» while loading. With reduced motion, the theme change cross-fades instead of flashing. Field errors clear as soon as the field is edited.
 
+## Simplicity review
+
+ponytail-review of the whole diff suggested four cuts, six lines in total. Three were applied: the backend's duplicate price table, a redundant cache header on the service worker, and the public `/api/health` route, which no browser code uses. The rubber-band resistance on the sheet stays, because Apple's fluid-interface guidance asks for soft edges.
+
 ## SAST
 
 | Tool | Result |
@@ -169,6 +182,8 @@ A dedicated UX reviewer then found more issues over two runs, six of them medium
 The SAST reviewer's three code findings were the same issues the red and blue teams found, listed above as S1 to S3. Manual review found parameterised SQL everywhere and no server-side request forgery path, because the proxy builds its upstream URL only from allowlist keys.
 
 ## Remaining risk and operator checklist
+
+- **No browser screenshot pass was run.** The UI changes were reviewed in code by two UX passes and their skeptics. Check the phone bottom sheet and RTL layout on a real device before release.
 
 - **Put a TLS reverse proxy in front.** Compose publishes the site on `127.0.0.1` only. The proxy should terminate TLS, overwrite `X-Forwarded-For` so the per-client limits see real addresses, and set request timeouts against slow-body clients.
 - **The global lead cap can be filled on purpose.** Someone sending junk can use up the overall 60-per-minute allowance, which delays real leads for that minute. This trades availability for a bounded junk rate.

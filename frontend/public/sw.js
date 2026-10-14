@@ -9,7 +9,10 @@ self.addEventListener("install", (e) => {
 });
 
 self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
+  e.waitUntil(Promise.all([
+    self.registration.navigationPreload?.enable(), // page requests start while the worker is still booting
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
+  ]));
   self.clients.claim();
 });
 
@@ -37,8 +40,9 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   // Pages and API data: network first, last good copy when offline (fleet data stays readable in a parking lot).
+  const network = req.mode === "navigate" ? Promise.resolve(e.preloadResponse).then((p) => p || fetch(req)) : fetch(req);
   e.respondWith(
-    fetch(req)
+    network
       .then((res) => put(req, res))
       .catch(() => caches.match(req).then((hit) => hit || (req.mode === "navigate" ? caches.match("/") : Response.error()))),
   );

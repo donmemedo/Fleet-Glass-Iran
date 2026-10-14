@@ -108,7 +108,8 @@ html[lang="en"] :is(h1, h2) { letter-spacing: -.035em; line-height: 1.06; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 70%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
 .hero h1 { font-size: clamp(2.7rem, 6.6vw, 5.8rem); font-weight: 850; margin: .35em 0 .3em; }
 html[lang="fa"] .hero h1 { font-size: clamp(2.3rem, 4.8vw, 4.4rem); }
-.grad-text { background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 7s linear infinite; }
+.grad-text { background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero .grad-text { animation: shine 7s linear infinite; } /* repaints every frame: hero only, paused offscreen */
 @keyframes shine { to { background-position: 200% center; } }
 .lead { font-size: clamp(1.05rem, 1.5vw, 1.25rem); color: var(--muted); max-width: 34em; margin: 0 0 32px; }
 .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }

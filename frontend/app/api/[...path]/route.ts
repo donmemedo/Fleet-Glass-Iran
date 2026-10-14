@@ -1,5 +1,5 @@
 // Same-origin proxy to FastAPI. Only the endpoints below are reachable; BACKEND_URL is read at runtime.
-const ROUTES = new Map<string, string[]>(Object.entries({ health: ["GET"], stats: ["GET"], plans: ["GET"], fleet: ["GET"], requests: ["GET", "POST"] }));
+const ROUTES = new Map<string, string[]>(Object.entries({ stats: ["GET"], plans: ["GET"], fleet: ["GET"], requests: ["GET", "POST"] }));
 const MAX_BODY = 16 * 1024;
 const PER_IP = 5; // stored leads per client per minute
 const GLOBAL = 60; // stored leads per minute overall: X-Forwarded-For can be forged when Next faces the internet directly
@@ -29,6 +29,7 @@ function take(key: string | null): Window {
   return w;
 }
 const giveBack = (charged: Window[]) => charged.forEach((w) => w.n--);
+const gzipped = new Map<string, ArrayBuffer>();
 const tooMany = () => reply(429, "Too many requests", { "retry-after": "60" });
 
 // Rightmost entry: the address the nearest proxy saw. Next only fills the header when the client did not send one.
@@ -107,8 +108,19 @@ async function handle(req: Request, { params }: { params: Promise<{ path: string
   }
   // Next does not compress route-handler responses; native gzip shrinks the fleet payload ~5x for phones on slow links.
   const gzip = r.status === 200 && r.body && /\bgzip\b/.test(req.headers.get("accept-encoding") ?? "");
-  if (gzip) out.set("content-encoding", "gzip");
-  return new Response(gzip ? r.body!.pipeThrough(new CompressionStream("gzip")) : r.body, { status: r.status, headers: out });
+  if (!gzip) return new Response(r.body, { status: r.status, headers: out });
+  out.set("content-encoding", "gzip");
+  const tag = r.headers.get("etag");
+  if (!tag) return new Response(r.body!.pipeThrough(new CompressionStream("gzip")), { status: r.status, headers: out });
+  // Static payloads carry a content-hash ETag, so each is compressed once per deploy instead of on every request.
+  let bytes = gzipped.get(tag);
+  if (bytes) await r.body!.cancel();
+  else {
+    bytes = await new Response(r.body!.pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
+    if (gzipped.size >= 32) gzipped.clear(); // bounded: a handful of payloads per deploy
+    gzipped.set(tag, bytes);
+  }
+  return new Response(bytes, { status: r.status, headers: out });
 }
 
 export { handle as GET, handle as POST };

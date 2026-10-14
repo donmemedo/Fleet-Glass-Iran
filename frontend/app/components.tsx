@@ -46,8 +46,14 @@ export function perFrame<A extends unknown[]>(fn: (...a: A) => void) {
 
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export const fmt = (n: number, lang: Lang, digits = 1) =>
-  new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: digits }).format(n);
+// Intl formatters are expensive to construct; the dashboard formats hundreds of numbers per keystroke.
+const numberFormats = new Map<string, Intl.NumberFormat>();
+export function fmt(n: number, lang: Lang, digits = 1) {
+  const key = `${lang}${digits}`;
+  let f = numberFormats.get(key);
+  if (!f) numberFormats.set(key, (f = new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US", { maximumFractionDigits: digits })));
+  return f.format(n);
+}
 
 /** Amount in million Toman → human string. */
 export function useMoney() {
@@ -176,11 +182,13 @@ export function CountUp({ to, digits = 0 }: { to: number; digits?: number }) {
   return <span ref={ref}>{fmt(v, lang, digits)}</span>;
 }
 
+const PLATE_DIGITS = new Intl.NumberFormat("fa-IR", { useGrouping: false });
+
 /** Iranian license plate: "12ب345-68". Plates always read LTR with Persian digits. */
 export function Plate({ value }: { value: string }) {
   const m = value.match(/^(\d{2})(\D)(\d{3})-(\d{2})$/);
   if (!m) return <span>{value}</span>;
-  const d = (s: string) => Number(s).toLocaleString("fa-IR", { useGrouping: false });
+  const d = (s: string) => PLATE_DIGITS.format(Number(s));
   return (
     <span className="plate" dir="ltr">
       <span className="plate-flag"><i /><b>I.R.<br />IRAN</b></span>

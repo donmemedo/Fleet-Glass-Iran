@@ -117,7 +117,8 @@ export default function Dashboard() {
   const backdropDown = useRef(false); // close on backdrop only when the press also started there (not a text selection ending outside)
   useFx(`${lang}${!!fleet}`);
 
-  const date = (s: string) => new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { dateStyle: "medium" }).format(new Date(s));
+  const dateFmt = useMemo(() => new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { dateStyle: "medium" }), [lang]);
+  const date = (s: string) => dateFmt.format(new Date(s));
   const name = (m: Record<string, string>, k: string) => m[k] ?? k;
 
   const rows = useMemo(() => {

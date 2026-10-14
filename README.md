@@ -3,9 +3,9 @@
 Web app for the business plan in this folder: a B2B windshield inspection, repair and SLA service for company fleets.
 
 - `frontend/` — Next.js 16 (App Router, TypeScript, plain CSS). Persian/English with RTL, light/dark, responsive.
-- `backend/` — FastAPI + SQLite. Endpoints: `/api/health`, `/api/stats`, `/api/plans`, `/api/fleet`, `POST /api/requests` (lead form), `GET /api/requests` (admin only).
+- `backend/` — FastAPI + SQLite. Endpoints: `/api/health` (container healthcheck only), `/api/stats`, `/api/plans`, `/api/fleet`, `POST /api/requests` (lead form), `GET /api/requests` (admin only).
 
-The browser only talks to Next (`/api/*`), which proxies an allowlist of endpoints to FastAPI using `BACKEND_URL`, read at runtime. The savings calculator runs in the browser (`frontend/app/quote.ts`).
+The browser only talks to Next (`/api/*`), which proxies an allowlist of endpoints (all but `/api/health`) to FastAPI using `BACKEND_URL`, read at runtime. The savings calculator runs in the browser (`frontend/app/quote.ts`).
 
 ## Run with Docker
 
