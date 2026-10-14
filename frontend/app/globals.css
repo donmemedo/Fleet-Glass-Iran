@@ -47,7 +47,7 @@ html[lang="en"] :is(h1, h2) { letter-spacing: -.035em; line-height: 1.06; }
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: .72em 1.3em;
-  border: 0; border-radius: 980px; background: var(--accent); color: #fff; font: inherit; font-weight: 600;
+  border: 0; border-radius: 980px; background: #0071e3; color: #fff; /* white text stays above 4.5:1 in both themes */ font: inherit; font-weight: 600;
   text-decoration: none; cursor: pointer; white-space: nowrap; min-height: 44px; -webkit-tap-highlight-color: transparent;
   box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--accent) 70%, transparent);
   transition: transform .25s var(--ease), background .3s, box-shadow .3s;
@@ -72,16 +72,18 @@ html[lang="en"] :is(h1, h2) { letter-spacing: -.035em; line-height: 1.06; }
 .nav { position: sticky; top: 0; z-index: 50; padding-top: env(safe-area-inset-top); transition: background .3s, box-shadow .3s; }
 .nav.scrolled { background: color-mix(in srgb, var(--bg) 84%, transparent); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); box-shadow: 0 1px 0 var(--line); }
 .nav-in { max-width: 1200px; margin: auto; display: flex; align-items: center; gap: 16px; padding: 12px 20px; }
-.brand { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 800; font-size: 1.05rem; text-decoration: none; }
+.brand { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 44px; font-weight: 800; font-size: 1.05rem; text-decoration: none; }
 .nav-links { display: flex; gap: 30px; margin-inline: auto; }
 .nav-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: .95rem; text-decoration: none; transition: color .2s; }
 .nav-links a:hover { color: var(--text); }
 .nav-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
 @media (max-width: 800px) { .nav-links { display: none; } }
-@media (max-width: 420px) { .brand span { display: none; } }
+@media (max-width: 420px) { .brand span, .icon-btn .opt { display: none; } }
 
 /* ---------- Reveal ---------- */
 .reveal:not(.in) { opacity: 0; }
+.enter { animation: rise .9s var(--ease) backwards; } /* above the fold: CSS only, never waits for JS */
+.enter.d1 { animation-delay: .08s; } .enter.d2 { animation-delay: .16s; } .enter.d3 { animation-delay: .24s; }
 .reveal.in { animation: rise .9s var(--ease) backwards; }
 .d1.in { animation-delay: .08s; } .d2.in { animation-delay: .16s; } .d3.in { animation-delay: .24s; }
 @keyframes rise { from { opacity: 0; transform: translateY(26px); filter: blur(6px); } }
@@ -240,7 +242,7 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; margin-top
 input[type="range"]::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .28); }
 input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
 .out-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
-.out-row s { color: var(--red); font-weight: 600; }
+.out-row s { color: var(--red-text); font-weight: 600; }
 .out-saved { margin-top: auto; padding-top: 22px; }
 .out-saved span { display: block; color: var(--muted); }
 .out-saved strong { display: block; font-size: clamp(2rem, 4.4vw, 3.2rem); font-weight: 850; line-height: 1.25; }
@@ -284,7 +286,7 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
 [dir="rtl"] .field input[dir="ltr"] { text-align: right; }
 .field input:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); }
 .has-error input { border-color: var(--red); }
-.field small, .form-fail { color: var(--red); font-size: .85rem; margin: 0; }
+.field small, .form-fail { color: var(--red-text); font-size: .85rem; margin: 0; }
 .form-ok { text-align: center; padding: 36px 8px; }
 .ok-badge { display: inline-grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: var(--green); color: #fff; animation: pop .6s var(--ease); box-shadow: 0 16px 40px -12px var(--green); }
 @keyframes pop { from { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.1); } }
@@ -355,7 +357,7 @@ i.r-low { background: var(--green); } i.r-medium { background: var(--orange); } 
 .segmented .on { background: var(--surface-solid); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .14); }
 [data-theme="dark"] .segmented .on { background: #3a3a3c; }
 .search { display: flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 12px; border-radius: 12px; background: var(--surface-2); color: var(--muted); }
-.search input { width: 190px; padding: 9px 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: .9rem; }
+.search input { width: 190px; padding: 9px 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 1rem; } /* under 16px, iOS zooms on focus */
 .search:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .table { display: grid; }
 .tr { display: grid; grid-template-columns: 1.5fr 1.4fr .8fr .8fr .8fr 1.1fr 1.1fr; gap: 12px; align-items: center; padding: 11px 10px; border-bottom: 1px solid var(--line); font-size: .92rem; border-radius: 12px; transition: background .2s; }
@@ -413,7 +415,8 @@ i.r-low { background: var(--green); } i.r-medium { background: var(--orange); } 
 /* Reduced motion: keep fades that aid understanding, drop movement, scaling, blur and endless loops. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .reveal.in { animation-name: fade; animation-duration: .4s; }
+  .reveal.in, .enter { animation-name: fade; animation-duration: .4s; }
+  .btn:active, .icon-btn:active { opacity: .7; } /* press cue without motion */
   .aurora i, .grad-text, .pulse, .chip, .glint, .scanner, .crack path, .impact, .resin, .reticle, .healed, .hd-crack, .hd-resin, .skeleton, .ok-badge { animation: none; }
   .impact { opacity: 0; }
   .ok-badge { animation: fade .3s; }

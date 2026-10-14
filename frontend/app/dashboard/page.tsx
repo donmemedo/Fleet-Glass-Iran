@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type RefObject } from "react";
-import { CountUp, fmt, Icon, LeadForm, LoadError, Nav, Plate, useApi, useFx, useMoney } from "../components";
+import { CountUp, fmt, Icon, LeadForm, LoadError, Nav, Plate, toLatin, useApi, useFx, useMoney } from "../components";
 import { useApp } from "../providers";
 
 type Vehicle = { id: number; plate: string; model: string; year: number; city: string; risk: "low" | "medium" | "high"; status: string; crack_mm: number; last_check: string };
@@ -121,7 +121,7 @@ export default function Dashboard() {
   const name = (m: Record<string, string>, k: string) => m[k] ?? k;
 
   const rows = useMemo(() => {
-    const s = q.trim().toLowerCase();
+    const s = toLatin(q.trim().toLowerCase()); // plates are stored with Latin digits; people type Persian ones
     return (fleet?.vehicles ?? [])
       .filter((v) => (risk === "all" || v.risk === risk) && (!s || `${v.plate} ${v.model} ${name(t.models, v.model)}`.toLowerCase().includes(s)))
       .sort((a, b) => ORDER[a.risk] - ORDER[b.risk] || b.crack_mm - a.crack_mm);
@@ -139,7 +139,7 @@ export default function Dashboard() {
     <>
       <Nav links={false} />
       <main className="dash">
-        <div className="dash-head reveal">
+        <div className="dash-head enter">
           <div>
             <p className="muted">{t.dash.hello}</p>
             <h1>{t.dash.title}</h1>

@@ -8,7 +8,7 @@ To report a vulnerability, contact the repository owner privately rather than op
 
 | Measure | Before | After |
 | --- | --- | --- |
-| Live pen-test controls passing (`scripts/pentest.py`) | 15 of 42 | __PENTEST__ |
+| Live pen-test controls passing (`scripts/pentest.py`) | 15 of 42 | 55 of 55 |
 | Backend dependency advisories (pip-audit) | 7, all in Starlette 0.46.2 | 0 |
 | Frontend dependency advisories (npm audit) | 0 at the first audit, 8 published since | 0 |
 | Lead list with names and phone numbers | Public | Admin key required, phone never returned |
@@ -147,7 +147,15 @@ Changes from the Apple fluid-interface review:
 - Every data load has loading, empty and error states with a retry button. The risk filter is a group of toggle buttons with `aria-pressed`.
 - New Persian copy follows the project's UX-writing vocabulary: «نادرست» rather than «اشتباه», «تلاش دوباره», «ورود».
 
-__UXREVIEW__
+A dedicated UX reviewer then found more issues over two runs, six of them medium. All are fixed:
+
+- **Request sheet.** Grabbing it during its entry animation now continues from where it is. After a drag-dismiss it stays offscreen instead of sliding back, and with reduced motion it fades out. A text selection that ends on the backdrop no longer closes it and loses what was typed. The dialog has an accessible name.
+- **First paint.** The hero and dashboard header used to stay invisible until JavaScript loaded. They now animate in with CSS alone, so they show on slow phones and without JavaScript.
+- **Contrast.** Risk pills, error text, the savings line, the gradient card and the primary button now reach 4.5:1 in both themes. High-contrast mode makes the nav bar opaque and the gradient text solid.
+- **Touch.** Hover effects apply only to real pointers, so nothing stays lifted after a tap. Nav links and the logo are 44 px targets, and the risk filter reacts on press. With reduced motion, buttons dim on press instead of scaling. The search field uses 16 px text, so iOS no longer zooms in on it. The header no longer overflows on small phones when the install button appears.
+- **Screen readers.** A sent request is announced and takes focus. A wrong admin key is announced and the field is refocused. The logo link has a name on phones. The language toggle and hero image have names in the current language. The vehicle list and chart expose table and value semantics, and an empty search result is announced.
+- **Persian copy.** Counts use the singular noun («۱۲۰ خودرو»). «تعهد پاسخ‌گویی» replaces «SLA», and «پرونده» replaces «پروفایل». The pricing buttons say «درخواست بازدید», which is what they do.
+- **Smaller fixes.** Searching plates with Persian digits now finds them. The donut shows a placeholder instead of «1» while loading. With reduced motion, the theme change cross-fades instead of flashing. Field errors clear as soon as the field is edited.
 
 ## SAST
 

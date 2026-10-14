@@ -107,7 +107,7 @@ export function Nav({ links = true }: { links?: boolean }) {
   return (
     <header className={`nav ${scrolled ? "scrolled" : ""}`}>
       <div className="nav-in">
-        <Link href="/" className="brand"><Logo /><span>{t.brand}</span></Link>
+        <Link href="/" className="brand" aria-label={t.brand}><Logo /><span>{t.brand}</span></Link>
         {links && (
           <nav className="nav-links">
             <a href="/#services">{t.nav.services}</a>
@@ -116,7 +116,7 @@ export function Nav({ links = true }: { links?: boolean }) {
           </nav>
         )}
         <div className="nav-actions">
-          {install && <button className="icon-btn" onClick={() => (install.prompt(), setInstall(null))}><Icon name="download" size={18} /><span>{t.nav.install}</span></button>}
+          {install && <button className="icon-btn" aria-label={t.nav.install} onClick={() => (install.prompt(), setInstall(null))}><Icon name="download" size={18} /><span className="opt">{t.nav.install}</span></button>}
           <button className="icon-btn" onClick={toggleLang} aria-label={t.nav.langLabel}><Icon name="globe" size={18} /><span lang={lang === "fa" ? "en" : "fa"}>{t.nav.lang}</span></button>
           <button className="icon-btn" onClick={toggleTheme} aria-label={t.nav.theme}><Icon name={theme === "dark" ? "sun" : "moon"} size={18} /></button>
           {links ? (
@@ -191,7 +191,7 @@ export function Plate({ value }: { value: string }) {
 }
 
 const PHONE = /^(\+98|0)?9\d{9}$/;
-const toLatin = (s: string) => s.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/[٠-٩]/g, (c) => String("٠١٢٣٤٥٦٧٨٩".indexOf(c)));
+export const toLatin = (s: string) => s.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/[٠-٩]/g, (c) => String("٠١٢٣٤٥٦٧٨٩".indexOf(c)));
 
 export function LeadForm({ onDone }: { onDone?: () => void }) {
   const { t } = useApp();
@@ -235,7 +235,7 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
 
   if (state === "ok")
     return (
-      <div className="form-ok" role="status">
+      <div className="form-ok" role="status" tabIndex={-1} ref={(el) => el?.focus()}>
         <span className="ok-badge"><Icon name="check" size={34} /></span>
         <p>{t.form.ok}</p>
       </div>

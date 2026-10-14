@@ -118,15 +118,15 @@ export default function Home() {
         <section className="hero" ref={hero}>
           <div className="aurora" aria-hidden><i /><i /><i /></div>
           <div className="hero-copy">
-            <p className="eyebrow reveal"><span className="pulse" />{t.hero.eyebrow}</p>
-            <h1 className="reveal d1">{t.hero.t1}<br /><span className="grad-text">{t.hero.t2}</span></h1>
-            <p className="lead reveal d2">{t.hero.sub}</p>
-            <div className="cta-row reveal d3">
+            <p className="eyebrow enter"><span className="pulse" />{t.hero.eyebrow}</p>
+            <h1 className="enter d1">{t.hero.t1}<br /><span className="grad-text">{t.hero.t2}</span></h1>
+            <p className="lead enter d2">{t.hero.sub}</p>
+            <div className="cta-row enter d3">
               <a href="#request" className="btn btn-lg">{t.hero.cta1}<Icon name="arrow" size={18} className="flip" /></a>
               <Link href="/dashboard" className="btn btn-lg btn-ghost">{t.hero.cta2}</Link>
             </div>
           </div>
-          <div className="hero-visual reveal d2"><Car /></div>
+          <div className="hero-visual enter d2"><Car /></div>
         </section>
 
         <section className="stats">
