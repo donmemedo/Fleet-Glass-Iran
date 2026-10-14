@@ -1,9 +1,15 @@
-# Both services run as non-root on a read-only root filesystem with every Linux capability dropped.
+# Both services run as non-root on a read-only root filesystem with every Linux capability dropped,
+# bounded memory/process counts, and rotated logs so a flood cannot fill the disk.
 x-hardened: &hardened
   read_only: true
   cap_drop: [ALL]
   security_opt: ["no-new-privileges:true"]
   tmpfs: [/tmp]
+  pids_limit: 256
+  mem_limit: 512m
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
 
 services:
   backend:
@@ -25,7 +31,8 @@ services:
     environment:
       BACKEND_URL: http://backend:8000
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      # Localhost only by default: put a TLS reverse proxy (Caddy, nginx) in front. WEB_BIND=0.0.0.0 serves plain HTTP to the network.
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy

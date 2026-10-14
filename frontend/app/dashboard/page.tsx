@@ -38,13 +38,20 @@ function useSheetDrag(dialog: RefObject<HTMLDialogElement | null>) {
     s.current.raf = requestAnimationFrame(step);
   };
   return {
+    reset() {
+      cancelAnimationFrame(s.current.raf);
+      Object.assign(s.current, { y: 0, v: 0, on: false });
+      dialog.current!.style.transform = dialog.current!.style.transition = "";
+    },
     onPointerDown(e: PointerEvent<HTMLElement>) {
       // Phones only: there the dialog is a bottom sheet, so dragging down matches where it came from.
       if ((e.target as HTMLElement).closest("button") || !matchMedia("(max-width: 600px)").matches) return;
       cancelAnimationFrame(s.current.raf); // grab it mid-flight and keep going from where it is
+      s.current.y = new DOMMatrix(getComputedStyle(dialog.current!).transform).m42; // the presentation value, even mid-entry
       e.currentTarget.setPointerCapture(e.pointerId);
       Object.assign(s.current, { on: true, grab: e.clientY - s.current.y, last: e.clientY, t: e.timeStamp, v: 0 });
       dialog.current!.style.transition = "none";
+      move(s.current.y);
     },
     onPointerMove(e: PointerEvent<HTMLElement>) {
       if (!s.current.on) return;
@@ -60,9 +67,8 @@ function useSheetDrag(dialog: RefObject<HTMLDialogElement | null>) {
       if (e.timeStamp - s.current.t > 80) s.current.v = 0; // finger stopped before lifting: no throw
       const h = dialog.current!.offsetHeight;
       const close = () => {
-        dialog.current!.close();
         dialog.current!.style.transition = "";
-        move(0);
+        dialog.current!.close(); // the inline offset keeps it offscreen while it closes; reset() clears it on the next open
       };
       if (s.current.y + project(s.current.v) > h / 2) settle(h, close);
       else settle(0, () => void (dialog.current!.style.transition = ""));
@@ -93,14 +99,22 @@ export default function Dashboard() {
   };
   const unlock = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    saveToken(String(new FormData(e.currentTarget).get("key") ?? "").trim());
+    const v = String(new FormData(e.currentTarget).get("key") ?? "").trim();
+    if (v === token) reqs.retry(); // same key again: ask again instead of doing nothing
+    saveToken(v);
   };
   const [risk, setRisk] = useState<string>("all");
   const [q, setQ] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0);
-  const openForm = () => (setFormKey((k) => k + 1), dialog.current?.showModal());
   const drag = useSheetDrag(dialog);
+  const { reset, ...dragHandlers } = drag;
+  const openForm = () => {
+    setFormKey((k) => k + 1);
+    reset();
+    dialog.current?.showModal();
+  };
+  const backdropDown = useRef(false); // close on backdrop only when the press also started there (not a text selection ending outside)
   useFx(`${lang}${!!fleet}`);
 
   const date = (s: string) => new Intl.DateTimeFormat(lang === "fa" ? "fa-IR-u-ca-persian" : "en-US", { dateStyle: "medium" }).format(new Date(s));
@@ -162,7 +176,7 @@ export default function Dashboard() {
             <div className="bars">
               {fleet?.months.map((m, i) => (
                 <div key={m.m} className="bar-col">
-                  <div className="bar-pair">
+                  <div className="bar-pair" role="img" aria-label={`${t.dash.months[i]}: ${fmt(m.repair, lang)} ${t.dash.repair} · ${fmt(m.replace, lang)} ${t.dash.replace}`}>
                     <i className="b-repair" style={{ height: `${(m.repair / max) * 100}%`, transitionDelay: `${i * 80}ms` }} title={`${fmt(m.repair, lang)}`} />
                     <i className="b-replace" style={{ height: `${(m.replace / max) * 100}%`, transitionDelay: `${i * 80 + 40}ms` }} title={`${fmt(m.replace, lang)}`} />
                   </div>
@@ -176,7 +190,7 @@ export default function Dashboard() {
             <header className="panel-head"><h2>{t.dash.riskMix}</h2></header>
             <div className="donut-wrap">
               <div className="donut" style={{ "--a": pct("low"), "--b": pct("low") + pct("medium") } as React.CSSProperties}>
-                <div><strong>{fmt(total, lang)}</strong><span>{t.dash.vehicles}</span></div>
+                <div><strong>{fleet ? fmt(total, lang) : fleetRes.status === undefined ? <span className="skeleton" /> : "—"}</strong><span>{t.dash.unit}</span></div>
               </div>
               <ul className="donut-legend">
                 {(["low", "medium", "high"] as const).map((k) => (
@@ -201,24 +215,23 @@ export default function Dashboard() {
               <label className="search"><Icon name="search" size={16} /><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.dash.search} aria-label={t.dash.search} /></label>
             </div>
           </header>
-          <div className="table">
-            <div className="tr th">
-              <span>{t.dash.cols.plate}</span><span>{t.dash.cols.model}</span><span>{t.dash.cols.city}</span><span>{t.dash.cols.risk}</span>
-              <span>{t.dash.cols.crack}</span><span>{t.dash.cols.status}</span><span>{t.dash.cols.last}</span>
+          <div className="table" role="table" aria-label={t.dash.vehicles}>
+            <div className="tr th" role="row">
+              {(["plate", "model", "city", "risk", "crack", "status", "last"] as const).map((k) => <span key={k} role="columnheader">{t.dash.cols[k]}</span>)}
             </div>
             {rows.map((v) => (
-              <div key={v.id} className="tr">
-                <span><Plate value={v.plate} /></span>
-                <span className="strong">{name(t.models, v.model)} <small className="muted">{fmt(v.year, lang, 0).replace(/[,٬]/g, "")}</small></span>
-                <span data-l={t.dash.cols.city}>{name(t.cities, v.city)}</span>
-                <span data-l={t.dash.cols.risk}><span className={`pill r-${v.risk}`}>{t.risk[v.risk]}</span></span>
-                <span data-l={t.dash.cols.crack}>{v.crack_mm ? `${fmt(v.crack_mm, lang)} ${t.dash.mm}` : "—"}</span>
-                <span data-l={t.dash.cols.status}>{t.status[v.status]}</span>
-                <span data-l={t.dash.cols.last} className="muted">{date(v.last_check)}</span>
+              <div key={v.id} className="tr" role="row">
+                <span role="cell"><Plate value={v.plate} /></span>
+                <span role="cell" className="strong">{name(t.models, v.model)} <small className="muted">{fmt(v.year, lang, 0).replace(/[,٬]/g, "")}</small></span>
+                <span role="cell" data-l={t.dash.cols.city}>{name(t.cities, v.city)}</span>
+                <span role="cell" data-l={t.dash.cols.risk}><span className={`pill r-${v.risk}`}>{t.risk[v.risk]}</span></span>
+                <span role="cell" data-l={t.dash.cols.crack}>{v.crack_mm ? `${fmt(v.crack_mm, lang)} ${t.dash.mm}` : "—"}</span>
+                <span role="cell" data-l={t.dash.cols.status}>{t.status[v.status]}</span>
+                <span role="cell" data-l={t.dash.cols.last} className="muted">{date(v.last_check)}</span>
               </div>
             ))}
-            {fleet && !rows.length && <p className="empty">{t.dash.empty}</p>}
           </div>
+          <p className="empty" role="status">{fleet && !rows.length ? t.dash.empty : ""}</p>
         </section>
 
         {(admin || token) && (
@@ -230,8 +243,9 @@ export default function Dashboard() {
             {!token || reqs.status === 401 ? (
               <form className="unlock" onSubmit={unlock}>
                 <label className="field">
-                  <span>{token ? t.dash.badKey : t.dash.adminHint}</span>
-                  <input name="key" type="password" autoComplete="off" dir="ltr" aria-label={t.dash.adminKey} placeholder={t.dash.adminKey} required />
+                  <span>{t.dash.adminHint}</span>
+                  <input name="key" type="password" autoComplete="off" dir="ltr" placeholder={t.dash.adminKey} required autoFocus={!!token} aria-invalid={!!token} />
+                  {token && <small role="alert">{t.dash.badKey}</small>}
                 </label>
                 <button className="btn">{t.dash.unlock}</button>
               </form>
@@ -247,7 +261,7 @@ export default function Dashboard() {
                   <li key={r.id}>
                     <span className="avatar">{r.company.slice(0, 1)}</span>
                     <div><b>{r.company}</b><small className="muted">{r.name} · {name(t.cities, r.city)}</small></div>
-                    <span className="pill">{fmt(r.fleet_size, lang)} {t.dash.vehicles}</span>
+                    <span className="pill">{fmt(r.fleet_size, lang)} {t.dash.unit}</span>
                     <small className="muted">{date(r.created.replace(" ", "T") + "Z")}</small>
                   </li>
                 ))}
@@ -259,11 +273,17 @@ export default function Dashboard() {
         )}
       </main>
 
-      <dialog ref={dialog} className="sheet" onClick={(e) => e.target === dialog.current && dialog.current.close()}>
+      <dialog
+        ref={dialog}
+        className="sheet"
+        aria-labelledby="sheet-title"
+        onPointerDown={(e) => (backdropDown.current = e.target === e.currentTarget)}
+        onClick={(e) => backdropDown.current && e.target === e.currentTarget && dialog.current?.close()}
+      >
         <div className="sheet-in">
-          <header className="panel-head sheet-drag" {...drag} onPointerCancel={drag.onPointerUp}>
+          <header className="panel-head sheet-drag" {...dragHandlers} onPointerCancel={drag.onPointerUp}>
             <span className="grabber" aria-hidden />
-            <h2>{t.form.title}</h2>
+            <h2 id="sheet-title">{t.form.title}</h2>
             <button className="icon-btn" onClick={() => dialog.current?.close()} aria-label={t.dash.close}><Icon name="close" size={18} /></button>
           </header>
           <LeadForm key={formKey} onDone={token ? reqs.retry : undefined} />

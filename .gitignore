@@ -9,3 +9,5 @@ Docs
 *.tsbuildinfo
 graphify-out
 HANDOFF.md
+.env
+.handoff

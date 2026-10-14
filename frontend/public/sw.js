@@ -13,8 +13,13 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Never store a response marked no-store or fetched with credentials. Pages are exempt: they are no-store
+// because they are rendered per request, and keeping the last copy is what makes the app open offline.
+const storable = (req, res) =>
+  res.ok && !req.headers.has("authorization") && (req.mode === "navigate" || !/no-store/.test(res.headers.get("cache-control") || ""));
+
 const put = (req, res) => {
-  if (res.ok) {
+  if (storable(req, res)) {
     const copy = res.clone();
     caches.open(CACHE).then((c) => c.put(req, copy));
   }

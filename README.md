@@ -17,6 +17,10 @@ ADMIN_TOKEN=$(openssl rand -hex 32) docker compose up --build   # also turn on t
 
 Both containers run as non-root users on a read-only filesystem with all Linux capabilities dropped. A `data` volume created by an older root-run version may need `chown 10001` once.
 
+The site listens on `127.0.0.1` only. In production, put a TLS reverse proxy such as Caddy or nginx in front of it. The proxy should overwrite `X-Forwarded-For` and set request timeouts. Set `WEB_BIND=0.0.0.0` only for a trusted local network, because it serves plain HTTP.
+
+Back up the lead database with `docker compose exec backend python -c "import sqlite3; sqlite3.connect('/data/app.db').backup(sqlite3.connect('/tmp/backup.db'))"`, then copy `/tmp/backup.db` out with `docker compose cp`.
+
 ## Run locally
 
 ```bash
@@ -35,7 +39,7 @@ cd frontend && npm install && npm run dev   # BACKEND_URL defaults to http://loc
 | --- | --- | --- |
 | `ADMIN_TOKEN` | backend env | 32+ random characters turn on the lead list. Open `/dashboard#admin` and enter the key. Unset or shorter: the endpoint does not exist. |
 | `API_DOCS=1` | backend env | Serves `/docs` and `/openapi.json`. Leave unset in production. |
-| Lead rate limit | `frontend/app/api/[...path]/route.ts` | 5 stored leads per client per minute and 60 overall. Put a reverse proxy that overwrites `X-Forwarded-For` in front of Next so the per-client limit sees real addresses. |
+| Lead rate limit | `frontend/app/api/[...path]/route.ts` | 5 stored leads per client per minute and 60 overall. Wrong admin keys: 10 per client per minute, each logged. |
 | CSP | `frontend/proxy.ts` | Per-request nonce for scripts. Other headers are in `frontend/next.config.ts`. |
 
 ## Test

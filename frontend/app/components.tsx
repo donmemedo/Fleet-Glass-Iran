@@ -92,7 +92,7 @@ export const Logo = () => (
 );
 
 export function Nav({ links = true }: { links?: boolean }) {
-  const { t, theme, toggleLang, toggleTheme } = useApp();
+  const { t, lang, theme, toggleLang, toggleTheme } = useApp();
   const [scrolled, setScrolled] = useState(false);
   // Chromium/Android install prompt; iOS installs via Share → Add to Home Screen.
   const [install, setInstall] = useState<(Event & { prompt: () => void }) | null>(null);
@@ -117,7 +117,7 @@ export function Nav({ links = true }: { links?: boolean }) {
         )}
         <div className="nav-actions">
           {install && <button className="icon-btn" onClick={() => (install.prompt(), setInstall(null))}><Icon name="download" size={18} /><span>{t.nav.install}</span></button>}
-          <button className="icon-btn" onClick={toggleLang} aria-label="Language"><Icon name="globe" size={18} /><span>{t.nav.lang}</span></button>
+          <button className="icon-btn" onClick={toggleLang} aria-label={t.nav.langLabel}><Icon name="globe" size={18} /><span lang={lang === "fa" ? "en" : "fa"}>{t.nav.lang}</span></button>
           <button className="icon-btn" onClick={toggleTheme} aria-label={t.nav.theme}><Icon name={theme === "dark" ? "sun" : "moon"} size={18} /></button>
           {links ? (
             <Link href="/dashboard" className="btn btn-sm">{t.nav.dashboard}</Link>
@@ -223,7 +223,12 @@ export function LeadForm({ onDone }: { onDone?: () => void }) {
   const field = (name: string, label: string, props: Record<string, unknown> = {}) => (
     <label className={`field ${errors[name] ? "has-error" : ""}`}>
       <span>{label}</span>
-      <input name={name} {...props} aria-invalid={!!errors[name]} />
+      <input
+        name={name}
+        {...props}
+        aria-invalid={!!errors[name]}
+        onInput={() => errors[name] && setErrors(({ [name]: _, ...rest }) => rest)}
+      />
       {errors[name] && <small role="alert">{errors[name]}</small>}
     </label>
   );

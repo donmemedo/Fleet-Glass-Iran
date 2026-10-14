@@ -36,7 +36,7 @@ export function Providers({ lang: initial, children }: { lang: Lang; children: R
     const html = document.documentElement;
     html.style.setProperty("--vx", `${e.clientX}px`);
     html.style.setProperty("--vy", `${e.clientY}px`);
-    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return apply();
+    if (!document.startViewTransition) return apply(); // reduced motion: CSS swaps the circular reveal for a cross-fade
     document.startViewTransition(apply);
   };
 

@@ -19,7 +19,7 @@ function Car() {
   const cracks = ["M0 0l-18-22-9-14", "M0 0l24-16 14-3", "M0 0l20 20 6 16", "M0 0l-22 14-18 4", "M0 0l4-28", "M0 0l-6 26 -8 10", "M0 0l30 4"];
   return (
     <div className="car-wrap" onPointerMove={(e) => tilt(e.currentTarget, e.clientX, e.clientY)} onPointerLeave={(e) => (e.currentTarget.style.setProperty("--rx", "0deg"), e.currentTarget.style.setProperty("--ry", "0deg"))}>
-      <svg className="car" viewBox="0 0 600 360" role="img" aria-label="Windshield inspection">
+      <svg className="car" viewBox="0 0 600 360" role="img" aria-label={t.hero.alt}>
         <defs>
           <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--car-1)" /><stop offset="1" stopColor="var(--car-2)" /></linearGradient>
           <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="var(--glass-1)" /><stop offset=".55" stopColor="var(--glass-2)" /><stop offset="1" stopColor="var(--glass-3)" /></linearGradient>
@@ -192,7 +192,7 @@ export default function Home() {
                 <p className="price">{p.id === "enterprise" && <small>{t.pricing.from} </small>}{money(p.price)}</p>
                 <p className="muted small">{t.pricing.units[p.unit]}</p>
                 <ul>{p.features.map((f) => <li key={f}><Icon name="check" size={16} />{t.pricing.features[f]}</li>)}</ul>
-                <a href="#request" className={`btn btn-block ${p.featured ? "" : "btn-ghost"}`}>{t.pricing.choose}</a>
+                <a href="#request" className={`btn btn-block ${p.featured ? "" : "btn-ghost"}`}>{t.nav.cta}</a>
               </article>
             ))}
           </div>
