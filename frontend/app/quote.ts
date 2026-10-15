@@ -1,10 +1,8 @@
 // Prices in million Toman, from the business plan (pricing section).
 export const PRICES = { inspection: 0.25, repair: 1.8, replace: 12 };
 
-export type Quote = { cracked: number; without: number; with: number; saved: number; downtimeDays: number };
-
 /** Yearly glass cost for a fleet, without and with two checks a year. Runs in the browser, so the sliders answer instantly. */
-export function quote(vehicles: number, crackRate: number): Quote {
+export function quote(vehicles: number, crackRate: number) {
   const cracked = (vehicles * crackRate) / 100;
   // Without checks most small cracks grow into replacements; with checks ~80% are caught while still repairable.
   const without = cracked * 0.7 * PRICES.replace + cracked * 0.3 * PRICES.repair;

@@ -44,8 +44,6 @@ export function perFrame<A extends unknown[]>(fn: (...a: A) => void) {
   };
 }
 
-export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 // Intl formatters are expensive to construct; the dashboard formats hundreds of numbers per keystroke.
 const numberFormats = new Map<string, Intl.NumberFormat>();
 export function fmt(n: number, lang: Lang, digits = 1) {
@@ -156,13 +154,13 @@ export function useFx(dep?: unknown) {
   }, [dep]);
 }
 
-export function CountUp({ to, digits = 0 }: { to: number; digits?: number }) {
+export function CountUp({ to }: { to: number }) {
   const { lang } = useApp();
   const ref = useRef<HTMLSpanElement>(null);
   const [v, setV] = useState(0);
   useEffect(() => {
     const el = ref.current!;
-    if (reducedMotion()) return setV(to);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return setV(to);
     let raf = 0, timer = 0;
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
@@ -179,7 +177,7 @@ export function CountUp({ to, digits = 0 }: { to: number; digits?: number }) {
     io.observe(el);
     return () => (io.disconnect(), cancelAnimationFrame(raf), clearTimeout(timer));
   }, [to]);
-  return <span ref={ref}>{fmt(v, lang, digits)}</span>;
+  return <span ref={ref}>{fmt(v, lang, 0)}</span>;
 }
 
 const PLATE_DIGITS = new Intl.NumberFormat("fa-IR", { useGrouping: false });

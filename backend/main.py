@@ -7,7 +7,7 @@ import random
 import secrets
 import sqlite3
 import unicodedata
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import date, timedelta
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -61,13 +61,9 @@ async def invalid(_: Request, exc: RequestValidationError):
 
 @contextmanager
 def db():
-    con = sqlite3.connect(DB, timeout=5)
-    con.row_factory = sqlite3.Row
-    try:
-        with con:
-            yield con
-    finally:
-        con.close()
+    with closing(sqlite3.connect(DB, timeout=5)) as con, con:
+        con.row_factory = sqlite3.Row
+        yield con
 
 
 with db() as con:

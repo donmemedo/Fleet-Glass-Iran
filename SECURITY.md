@@ -170,6 +170,19 @@ A dedicated UX reviewer then found more issues over two runs, six of them medium
 
 ponytail-review of the whole diff suggested four cuts, six lines in total. Three were applied: the backend's duplicate price table, a redundant cache header on the service worker, and the public `/api/health` route, which no browser code uses. The rubber-band resistance on the sheet stays, because Apple's fluid-interface guidance asks for soft edges.
 
+A second pass (branch `ponytail-simplify`) reviewed the diff in four areas, and a skeptic tried to refute every cut. 13 of 14 cuts held up and were applied, for 65 lines removed and 29 added (net -36), with no behavior change:
+
+- Backend `db()` uses `contextlib.closing` instead of a hand-written try/finally.
+- The proxy's 429 helper now does its own refund, so both rate-limit sites are one line each.
+- Removed dead code: the i18n keys `hero.scan` and `pricing.choose`, the `Quote` type, the unused `digits` prop on `CountUp`, and two duplicate CSS rules.
+- Inlined the one-caller `reducedMotion` helper. The reduced-motion check itself stays.
+- The hero tilt resets through the same math (`NaN || 0`) instead of a separate branch.
+- The sheet spring clears its transition in one place, merging both release paths into one call. The spring, momentum projection and rubber band are unchanged.
+- The `.enter` and `.reveal.in` entrance rules are merged with `:is()`, at the same specificity.
+- The pen-test socket read loop is shorter, and a no-op `json.dumps(...)[:-1] + "}"` round trip is gone.
+
+The refuted cut was dropping two unread fields from `/api/stats`. It saves no lines and changes a public response.
+
 ## SAST
 
 | Tool | Result |

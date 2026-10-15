@@ -12,7 +12,6 @@ const fa = {
     chip1: "ترک ۸ میلی‌متری · قابل تعمیر",
     chip2: "پاسخ‌گویی زیر ۱۰ دقیقه",
     chip3: "۸۵٪ ارزان‌تر از تعویض",
-    scan: "در حال بررسی",
     alt: "بازدید و ترمیم ترک شیشه جلوی خودرو",
   },
   stats: { caption: "اهداف سال اول", fleets: "قرارداد ناوگانی", vehicles: "بازدید خودرو در سال", sla: "دقیقه پاسخ‌گویی", renewal: "٪ تمدید قرارداد" },
@@ -59,7 +58,6 @@ const fa = {
       priority: "اولویت تیم سیار", dashboard: "پیش‌خوان اختصاصی", api: "خروجی اکسل و API",
     } as Record<string, string>,
     popular: "محبوب",
-    choose: "انتخاب",
     from: "از",
   },
   form: {
@@ -111,7 +109,6 @@ const en: Dict = {
     chip1: "8 mm chip · repairable",
     chip2: "Response under 10 min",
     chip3: "85% cheaper than replacing",
-    scan: "Scanning",
     alt: "A windshield chip being found and repaired",
   },
   stats: { caption: "Year-one targets", fleets: "Fleet contracts", vehicles: "Vehicle checks a year", sla: "Minute response SLA", renewal: "% contract renewal" },
@@ -158,7 +155,6 @@ const en: Dict = {
       priority: "Mobile team priority", dashboard: "Dedicated dashboard", api: "Excel & API export",
     },
     popular: "Popular",
-    choose: "Choose",
     from: "from",
   },
   form: {

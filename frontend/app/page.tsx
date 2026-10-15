@@ -12,14 +12,10 @@ function Car() {
   const { t } = useApp();
   // Tilt tracks the pointer 1:1, with one layout read per frame.
   const tilt = useMemo(() => perFrame((el: HTMLElement, x: number, y: number) => {
-    if (Number.isNaN(x)) {
-      el.style.setProperty("--rx", "0deg");
-      el.style.setProperty("--ry", "0deg");
-      return;
-    }
     const r = el.getBoundingClientRect();
-    el.style.setProperty("--ry", `${((x - r.left) / r.width - 0.5) * 14}deg`);
-    el.style.setProperty("--rx", `${((y - r.top) / r.height - 0.5) * -10}deg`);
+    // NaN from onPointerLeave falls through `|| 0`: the tilt resets to 0deg.
+    el.style.setProperty("--ry", `${((x - r.left) / r.width - 0.5) * 14 || 0}deg`);
+    el.style.setProperty("--rx", `${((y - r.top) / r.height - 0.5) * -10 || 0}deg`);
   }), []);
   const cracks = ["M0 0l-18-22-9-14", "M0 0l24-16 14-3", "M0 0l20 20 6 16", "M0 0l-22 14-18 4", "M0 0l4-28", "M0 0l-6 26 -8 10", "M0 0l30 4"];
   return (

@@ -30,7 +30,7 @@ function take(key: string | null): Window {
 }
 const giveBack = (charged: Window[]) => charged.forEach((w) => w.n--);
 const gzipped = new Map<string, ArrayBuffer>();
-const tooMany = () => reply(429, "Too many requests", { "retry-after": "60" });
+const tooMany = (charged: Window[]) => { giveBack(charged); return reply(429, "Too many requests", { "retry-after": "60" }); };
 
 // Rightmost entry: the address the nearest proxy saw. Next only fills the header when the client did not send one.
 const clientIp = (req: Request) => req.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
@@ -69,10 +69,7 @@ async function handle(req: Request, { params }: { params: Promise<{ path: string
   if (auth) {
     headers.authorization = auth;
     charged = [take(`auth:${ip}`)];
-    if (charged[0].n > AUTH_FAILS) {
-      giveBack(charged);
-      return tooMany();
-    }
+    if (charged[0].n > AUTH_FAILS) return tooMany(charged);
   }
   if (req.method === "POST") {
     // JSON-only also blocks cross-site form posts: a JSON content type forces a CORS preflight we never answer.
@@ -82,10 +79,7 @@ async function handle(req: Request, { params }: { params: Promise<{ path: string
     body = text;
     headers["content-type"] = "application/json";
     charged = [take(`lead:${ip}`), take(null)];
-    if (charged[0].n > PER_IP || charged[1].n > GLOBAL) {
-      giveBack(charged);
-      return tooMany();
-    }
+    if (charged[0].n > PER_IP || charged[1].n > GLOBAL) return tooMany(charged);
   }
 
   let r: Response;

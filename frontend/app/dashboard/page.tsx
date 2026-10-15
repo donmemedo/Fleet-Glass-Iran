@@ -23,14 +23,15 @@ function useSheetDrag(dialog: RefObject<HTMLDialogElement | null>) {
     dialog.current!.style.transform = y ? `translateY(${y}px)` : "";
   };
   // Critically damped spring (damping 1, response 0.3 s) in closed form, starting from the live offset and velocity.
-  const settle = (to: number, done?: () => void) => {
+  const settle = (to: number, done: () => void) => {
     const w = (2 * Math.PI) / 0.3, x0 = s.current.y - to, v0 = s.current.v, t0 = performance.now();
     const step = (now: number) => {
       const t = (now - t0) / 1000, k = Math.exp(-w * t);
       const x = (x0 + (v0 + w * x0) * t) * k, v = (v0 - w * (v0 + w * x0) * t) * k;
       if (Math.abs(x) < 0.5 && Math.abs(v) < 20) {
         move(to);
-        return done?.();
+        dialog.current!.style.transition = "";
+        return done();
       }
       move(to + x);
       s.current.raf = requestAnimationFrame(step);
@@ -65,13 +66,9 @@ function useSheetDrag(dialog: RefObject<HTMLDialogElement | null>) {
       if (!s.current.on) return;
       s.current.on = false;
       if (e.timeStamp - s.current.t > 80) s.current.v = 0; // finger stopped before lifting: no throw
-      const h = dialog.current!.offsetHeight;
-      const close = () => {
-        dialog.current!.style.transition = "";
-        dialog.current!.close(); // the inline offset keeps it offscreen while it closes; reset() clears it on the next open
-      };
-      if (s.current.y + project(s.current.v) > h / 2) settle(h, close);
-      else settle(0, () => void (dialog.current!.style.transition = ""));
+      const h = dialog.current!.offsetHeight, out = s.current.y + project(s.current.v) > h / 2;
+      // the inline offset keeps it offscreen while it closes; reset() clears it on the next open
+      settle(out ? h : 0, () => { if (out) dialog.current!.close(); });
     },
   };
 }
